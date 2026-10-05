@@ -11,10 +11,10 @@ import '../../core/theme/motion.dart';
 import '../../core/theme/tokens.dart';
 import '../../domain/amount_input.dart';
 import '../../models/account.dart';
-import '../../models/category.dart';
 import '../../models/txn.dart';
 import '../../state/ledger_store.dart';
 import '../sheets/account_sheets.dart';
+import '../sheets/category_picker.dart';
 import '../widgets/app_keypad.dart';
 import '../widgets/common.dart';
 import '../widgets/emoji_avatar.dart';
@@ -235,13 +235,7 @@ class _AddTxnSheetState extends State<AddTxnSheet> with SingleTickerProviderStat
   }
 
   Future<void> _allCategories() async {
-    final cats = _store.categoriesFor(_accountId);
-    final picked = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (ctx) => _CategoryGridSheet(categories: cats, selectedId: _categoryId),
-    );
+    final picked = await showCategoryPicker(context, accountId: _accountId, selectedId: _categoryId);
     if (!mounted || picked == null) return;
     _selectCategory(picked);
   }
@@ -580,7 +574,7 @@ class _AddTxnSheetState extends State<AddTxnSheet> with SingleTickerProviderStat
         itemCount: cats.length + 1,
         itemBuilder: (context, i) {
           if (i == cats.length) {
-            return _CategoryTile(
+            return CategoryTile(
               key: const ValueKey('more'),
               emoji: '⋯',
               name: s.more,
@@ -590,7 +584,7 @@ class _AddTxnSheetState extends State<AddTxnSheet> with SingleTickerProviderStat
             );
           }
           final cat = cats[i];
-          return _CategoryTile(
+          return CategoryTile(
             key: ValueKey(cat.id),
             emoji: cat.emoji,
             name: cat.name,
@@ -762,61 +756,6 @@ class _AccountButton extends StatelessWidget {
   }
 }
 
-class _CategoryTile extends StatelessWidget {
-  const _CategoryTile({
-    super.key,
-    required this.emoji,
-    required this.name,
-    required this.color,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String emoji;
-  final String name;
-  final Color color;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: name,
-      excludeSemantics: true,
-      child: Material(
-        color: selected ? c.primary.withValues(alpha: 0.08) : Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: selected ? c.primary : Colors.transparent, width: 2),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                EmojiAvatar(emoji: emoji, color: color, size: 40),
-                const SizedBox(height: 4),
-                Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _MetaChip extends StatelessWidget {
   const _MetaChip({required this.icon, required this.label, required this.onTap});
 
@@ -853,58 +792,6 @@ class _MetaChip extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CategoryGridSheet extends StatelessWidget {
-  const _CategoryGridSheet({required this.categories, required this.selectedId});
-
-  final List<Category> categories;
-  final String? selectedId;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = AppStrings.of(context);
-    return SafeArea(
-      top: false,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.7),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text(s.chooseCategory, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-            ),
-            Flexible(
-              child: GridView.builder(
-                shrinkWrap: true,
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 88,
-                  mainAxisExtent: 84,
-                  mainAxisSpacing: 6,
-                  crossAxisSpacing: 6,
-                ),
-                itemCount: categories.length,
-                itemBuilder: (context, i) {
-                  final cat = categories[i];
-                  return _CategoryTile(
-                    key: ValueKey(cat.id),
-                    emoji: cat.emoji,
-                    name: cat.name,
-                    color: Color(cat.color),
-                    selected: cat.id == selectedId,
-                    onTap: () => Navigator.pop(context, cat.id),
-                  );
-                },
-              ),
-            ),
-          ],
         ),
       ),
     );

@@ -34,6 +34,15 @@ const List<String> kAccountEmoji = [
   '🏧', '💸', '🐷', '🔒', '⭐', '🌴', '🛍️', '⚽', '🎮', '🧳',
 ];
 
+/// Emoji offered for categories.
+const List<String> kCategoryEmoji = [
+  '🍽️', '🍕', '☕', '🍔', '🛒', '🍎', '🚗', '⛽', '🚌', '🚕',
+  '✈️', '🏠', '💡', '💧', '📱', '🌐', '🛍️', '👕', '👟', '💄',
+  '🏥', '💊', '🏋️', '🎬', '🎮', '🎵', '📚', '🎓', '🎁', '🐶',
+  '👶', '🛡️', '🔧', '🧾', '💳', '🏦', '📈', '💵', '💻', '💼',
+  '🤝', '🔁', '❤️', '🎉', '🧳', '⚽', '🪴', '📌',
+];
+
 /// Colours offered for accounts and categories.
 const List<int> kPalette = [
   0xFF2563EB, 0xFF0EA5E9, 0xFF06B6D4, 0xFF10B981,

@@ -11,11 +11,22 @@ import 'emoji_avatar.dart';
 
 /// One transaction row. Amounts are in the row's own account currency.
 class TxnTile extends StatelessWidget {
-  const TxnTile({super.key, required this.txn, required this.onTap, this.showAccount = false});
+  const TxnTile({
+    super.key,
+    required this.txn,
+    required this.onTap,
+    this.onLongPress,
+    this.showAccount = false,
+    this.selectionMode = false,
+    this.selected = false,
+  });
 
   final Txn txn;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final bool showAccount;
+  final bool selectionMode;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +48,7 @@ class TxnTile extends StatelessWidget {
       final to = outgoing ? other?.name : account?.name;
       title = txn.description;
       subtitle = '${from ?? '—'} → ${to ?? '—'} · ${timeLabel(txn.date)}';
+      // (Transfer rows always name both accounts, so showAccount adds nothing.)
       amountColor = c.transfer;
     } else {
       avatar = EmojiAvatar(
@@ -53,13 +65,25 @@ class TxnTile extends StatelessWidget {
       amountColor = txn.type == TxnType.income ? c.income : c.expense;
     }
 
-    return InkWell(
+    return Material(
+      color: selected ? c.primary.withValues(alpha: 0.10) : Colors.transparent,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
       onTap: onTap,
+      onLongPress: onLongPress,
       borderRadius: BorderRadius.circular(14),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
         child: Row(
           children: [
+            if (selectionMode) ...[
+              Icon(
+                selected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                color: selected ? c.primary : c.muted,
+                size: 22,
+              ),
+              const SizedBox(width: 10),
+            ],
             avatar,
             const SizedBox(width: 12),
             Expanded(
@@ -103,6 +127,7 @@ class TxnTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

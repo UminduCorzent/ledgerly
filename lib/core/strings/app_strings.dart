@@ -200,6 +200,122 @@ class AppStrings {
   String aboutVersion(String v, String build, String sha) =>
       '$v · build $build · $sha';
 
+  // Transactions tab (search, period, filters, sort, selection)
+  String get search => 'Search';
+  String get closeSearch => 'Close search';
+  String get searchHint => 'Search description, category, notes';
+  String get filters => 'Filters';
+  String get sort => 'Sort';
+  String get previousPeriod => 'Previous month';
+  String get nextPeriod => 'Next month';
+  String get allTime => 'All time';
+  String get customRange => 'Custom range';
+  String get choosePeriod => 'Choose period';
+  String get periodIn => 'In';
+  String get periodOut => 'Out';
+  String resultsCount(int n) => '$n result${n == 1 ? '' : 's'}';
+  String excludedCount(int n) => '$n excluded';
+  String get mixedCurrencies => 'Mixed currencies — totals may not add up';
+  String get noMatchesTitle => 'No matching transactions';
+  String get noMatchesBody => 'Try removing a filter or choosing another period.';
+  String get clearFilters => 'Clear filters';
+  String emptyPeriodTitle(String period) => 'Nothing in $period';
+  String get emptyPeriodBody => 'Transactions you add show up here, grouped by day.';
+  String selectedCount(int n) => '$n selected';
+  String get selectAll => 'Select all';
+  String get clearSelection => 'Clear selection';
+  String deleteTxnsTitle(int n) => 'Delete $n transaction${n == 1 ? '' : 's'}?';
+  String get deleteTxnsBody =>
+      'Transfers are deleted on both sides. You can undo this right after.';
+  String txnsDeleted(int n) => '$n transaction${n == 1 ? '' : 's'} deleted';
+  String accountsChip(int n) => '$n accounts';
+  String get countedOnly => 'Counted only';
+  String get excludedOnly => 'Excluded only';
+  String amountAtLeast(String v) => '≥ $v';
+  String amountAtMost(String v) => '≤ $v';
+  String amountBetween(String a, String b) => '$a – $b';
+  String removeFilter(String name) => 'Remove $name';
+
+  // Filter sheet
+  String get filterDate => 'Date';
+  String get filterType => 'Type';
+  String get filterAccounts => 'Accounts';
+  String get filterCategories => 'Categories';
+  String get filterAmount => 'Amount';
+  String get filterCounting => 'Counting';
+  String get countingAll => 'All';
+  String get countingCounted => 'Counted';
+  String get countingExcluded => 'Excluded';
+  String get amountMin => 'Min';
+  String get amountMax => 'Max';
+  String get amountRangeError => 'Min is more than max';
+  String get clear => 'Clear';
+  String showResults(int n) => 'Show $n result${n == 1 ? '' : 's'}';
+  String get categorySearchHint => 'Search categories';
+  String get pickCustomRange => 'Pick dates…';
+  String presetLabel(String name) => switch (name) {
+        'today' => 'Today',
+        'thisWeek' => 'This week',
+        'thisMonth' => 'This month',
+        'lastMonth' => 'Last month',
+        'last3Months' => 'Last 3 months',
+        'thisYear' => 'This year',
+        _ => 'All time',
+      };
+
+  // Sort sheet
+  String get sortTitle => 'Sort by';
+  String sortLabel(String name) => switch (name) {
+        'dateAsc' => 'Oldest first',
+        'amountDesc' => 'Highest amount',
+        'amountAsc' => 'Lowest amount',
+        'categoryAsc' => 'Category A–Z',
+        'categoryDesc' => 'Category Z–A',
+        'typeAsc' => 'Type: income first',
+        'typeDesc' => 'Type: transfers first',
+        'accountAsc' => 'Account A–Z',
+        'accountDesc' => 'Account Z–A',
+        _ => 'Newest first',
+      };
+
+  // Categories
+  String get categoriesTitle => 'Categories';
+  String get addCategory => 'Add category';
+  String get editCategory => 'Edit category';
+  String get categoryName => 'Name';
+  String get categoryNameHint => 'e.g. Coffee';
+  String get categoryIcon => 'Icon';
+  String get categoryColor => 'Colour';
+  String get categoryAdded => 'Category added';
+  String get categoryUpdated => 'Category updated';
+  String get categoryNameTaken => 'You already have a category with this name';
+  String usageCount(int n) => n == 0 ? 'No transactions' : '$n transaction${n == 1 ? '' : 's'}';
+  String get categoriesReordered => 'Order saved';
+  String get searchCategories => 'Search categories';
+  String get noCategoryMatches => 'No categories match';
+  String deleteCategoriesTitle(int n) => n == 1 ? 'Delete category?' : 'Delete $n categories?';
+  String get deleteCategoriesBody => 'You can undo this right after.';
+  String categoryHasTxns(int n) =>
+      '${n == 1 ? 'It is' : 'They are'} used by $n transaction${n == 1 ? '' : 's'}. What should happen to ${n == 1 ? 'it' : 'them'}?';
+  String get moveToCategory => 'Move them to another category';
+  String get deleteTheirTxns => 'Delete those transactions';
+  String get keepOneCategory => 'Keep at least one category';
+  String categoriesDeleted(int n) => n == 1 ? 'Category deleted' : '$n categories deleted';
+  String get deleteCategory => 'Delete category';
+
+  // Default categories
+  String get defaultCategories => 'Default categories';
+  String get defaultCategoriesBody => 'Picked automatically when you add a transaction.';
+  String get defaultExpense => 'Expense';
+  String get defaultIncome => 'Income';
+  String defaultSummary(String expense, String income) => 'Expense: $expense · Income: $income';
+
+  // Settings — account group
+  String settingsAccountGroup(String name) => 'This account · $name';
+  String get switchLabel => 'Switch';
+  String categoriesCount(int n) => '$n categor${n == 1 ? 'y' : 'ies'}';
+  String accountScopeHint(String name) => 'Settings in this group change only $name.';
+
   // Seeded categories (order matters — see domain/seeds.dart)
   List<String> get seedCategoryNames => const [
         'Food',

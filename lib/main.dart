@@ -7,6 +7,7 @@ import 'core/theme/app_theme.dart';
 import 'data/db.dart';
 import 'state/ledger_store.dart';
 import 'state/settings_store.dart';
+import 'state/txn_filter_store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,11 +25,13 @@ Future<void> _boot() async {
   }
   final settings = SettingsStore(db)..load();
   final ledger = LedgerStore(db)..load();
+  final filters = TxnFilterStore(ledger, db);
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider<SettingsStore>.value(value: settings),
         ChangeNotifierProvider<LedgerStore>.value(value: ledger),
+        ChangeNotifierProvider<TxnFilterStore>.value(value: filters),
       ],
       child: const LedgerlyApp(),
     ),

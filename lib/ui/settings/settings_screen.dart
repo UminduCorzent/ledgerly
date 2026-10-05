@@ -4,9 +4,14 @@ import 'package:provider/provider.dart';
 import '../../core/app_info.dart';
 import '../../core/strings/app_strings.dart';
 import '../../core/theme/tokens.dart';
+import '../../models/txn.dart';
 import '../../state/ledger_store.dart';
 import '../../state/settings_store.dart';
 import '../accounts/accounts_screen.dart';
+import '../categories/categories_screen.dart';
+import '../categories/default_categories_sheet.dart';
+import '../sheets/account_sheets.dart';
+import '../widgets/emoji_avatar.dart';
 import '../widgets/segmented.dart';
 
 /// One Settings page. App-wide settings first; the per-account group joins in a later milestone.
@@ -55,11 +60,127 @@ class SettingsScreen extends StatelessWidget {
             subtitle: s.aboutVersion(AppInfo.version, AppInfo.buildNumber, AppInfo.buildSha),
           ),
         ]),
-        const SizedBox(height: 8),
+        const SizedBox(height: 24),
+        const _AccountGroup(),
+        const SizedBox(height: 16),
         Center(
           child: Text(s.appName, style: TextStyle(color: c.muted, fontSize: 12)),
         ),
       ],
+    );
+  }
+}
+
+/// Per-account settings, tinted in the account's colour so their scope is obvious.
+class _AccountGroup extends StatelessWidget {
+  const _AccountGroup();
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final c = context.colors;
+    final ledger = context.watch<LedgerStore>();
+    final account = ledger.activeAccount;
+    if (account == null) return const SizedBox.shrink();
+    final color = Color(account.color);
+    final cats = ledger.categoriesFor(account.id);
+    final expenseDefault = ledger.category(ledger.defaultCategoryId(account.id, TxnType.expense));
+    final incomeDefault = ledger.category(ledger.defaultCategoryId(account.id, TxnType.income));
+    final badge = _ScopeBadge(emoji: account.emoji, color: color);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _GroupLabel(s.settingsAccountGroup(account.name)),
+        Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: Color.alphaBlend(color.withValues(alpha: 0.06), c.surface),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: Color.alphaBlend(color.withValues(alpha: 0.35), c.line)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: c.tinted(color),
+                  border: Border(left: BorderSide(color: color, width: 5)),
+                ),
+                padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+                child: Row(
+                  children: [
+                    EmojiAvatar(emoji: account.emoji, color: color, size: 38),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            account.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                          ),
+                          Text(
+                            '${s.accountTypeLabel(account.type.name)} · ${account.currency}',
+                            style: TextStyle(color: c.muted, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(minimumSize: const Size(0, 38)),
+                      onPressed: () => showAccountSwitcher(context),
+                      child: Text(s.switchLabel),
+                    ),
+                  ],
+                ),
+              ),
+              _Row(
+                icon: Icons.category_outlined,
+                title: s.categoriesTitle,
+                subtitle: s.categoriesCount(cats.length),
+                badge: badge,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const CategoriesScreen()),
+                ),
+              ),
+              Divider(height: 1, indent: 60, color: c.line),
+              _Row(
+                icon: Icons.star_outline_rounded,
+                title: s.defaultCategories,
+                subtitle: s.defaultSummary(expenseDefault?.name ?? '—', incomeDefault?.name ?? '—'),
+                badge: badge,
+                onTap: () => showDefaultCategoriesSheet(context),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+          child: Text(s.accountScopeHint(account.name), style: TextStyle(color: c.muted, fontSize: 12)),
+        ),
+      ],
+    );
+  }
+}
+
+/// Small chip that marks a row as applying to the current account only.
+class _ScopeBadge extends StatelessWidget {
+  const _ScopeBadge({required this.emoji, required this.color});
+
+  final String emoji;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: context.colors.tinted(color),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(emoji, style: const TextStyle(fontSize: 12)),
     );
   }
 }
@@ -121,6 +242,7 @@ class _Row extends StatelessWidget {
     this.value,
     this.onTap,
     this.below,
+    this.badge,
   });
 
   final IconData icon;
@@ -129,6 +251,7 @@ class _Row extends StatelessWidget {
   final String? value;
   final VoidCallback? onTap;
   final Widget? below;
+  final Widget? badge;
 
   @override
   Widget build(BuildContext context) {
@@ -162,6 +285,7 @@ class _Row extends StatelessWidget {
                   ],
                 ),
               ),
+              if (badge != null) ...[badge!, const SizedBox(width: 4)],
               if (value != null)
                 Text(value!, style: TextStyle(color: c.muted, fontSize: 13)),
               if (onTap != null) Icon(Icons.chevron_right_rounded, color: c.muted),

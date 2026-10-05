@@ -201,9 +201,42 @@ class LedgerStore extends ChangeNotifier {
         return map;
       });
 
-  /// The current "This month" for [accountId]. Calendar month for now; the
-  /// per-account month-cycle setting plugs in here.
-  DateRange currentCycle(String accountId, DateTime now) => fixedDayCycle(now, 1);
+  /// The month cycle containing [date] for [accountId]. Calendar month for now;
+  /// the per-account month-cycle setting plugs in here.
+  DateRange cycleContaining(String accountId, DateTime date) => fixedDayCycle(date, 1);
+
+  /// The current "This month" for [accountId].
+  DateRange currentCycle(String accountId, DateTime now) => cycleContaining(accountId, now);
+
+  /// Display name used for search, sort and category filters. Transfers have no
+  /// category, so they use [transferLabel].
+  String categoryNameOf(Txn t, String transferLabel) =>
+      t.isTransfer ? transferLabel : (category(t.categoryId)?.name ?? '');
+
+  /// Transaction count per category id for one account (excluded rows included).
+  Map<String, int> categoryUsage(String accountId) => _cached('catUsage:$accountId', () {
+        final map = <String, int>{};
+        for (final t in txnsFor(accountId)) {
+          final id = t.categoryId;
+          if (id != null) map[id] = (map[id] ?? 0) + 1;
+        }
+        return map;
+      });
+
+  bool isCategoryNameTaken(String accountId, String name, {String? exceptId}) {
+    final lower = name.trim().toLowerCase();
+    return _categories.values.any(
+      (c) => c.accountId == accountId && c.id != exceptId && c.name.toLowerCase() == lower,
+    );
+  }
+
+  /// The user's saved default for [type], if it still exists.
+  String? savedDefaultCategoryId(String accountId, TxnType type) {
+    final saved = _db.setting<String>(_defaultKey(accountId, type));
+    return saved != null && _categories[saved]?.accountId == accountId ? saved : null;
+  }
+
+  static String _defaultKey(String accountId, TxnType type) => 'defaultCat_${type.name}_$accountId';
 
   static String _dayKey(DateTime d) => '${d.year}-${d.month}-${d.day}';
 
@@ -271,8 +304,8 @@ class LedgerStore extends ChangeNotifier {
 
   /// The category preselected in the Add sheet for [type].
   String? defaultCategoryId(String accountId, TxnType type) {
-    final saved = _db.setting<String>('defaultCat_${type.name}_$accountId');
-    if (saved != null && _categories[saved]?.accountId == accountId) return saved;
+    final saved = savedDefaultCategoryId(accountId, type);
+    if (saved != null) return saved;
     final cats = categoriesFor(accountId);
     if (cats.isEmpty) return null;
     final seedIndex = type == TxnType.income ? kSeedIncomeDefault : kSeedExpenseDefault;
@@ -510,12 +543,100 @@ class LedgerStore extends ChangeNotifier {
   }
 
   /// Deletes a transaction; for a transfer, both legs.
-  Future<WriteResult> deleteTxn(String id) {
-    final t = _txns[id];
-    if (t == null) return Future.value(WriteResult.ok(ChangeSet()));
-    final cs = ChangeSet()..delete(Db.txns, t.id);
-    final other = counterpart(t);
-    if (other != null) cs.delete(Db.txns, other.id);
+  Future<WriteResult> deleteTxn(String id) => deleteTxns([id]);
+
+  /// Deletes several transactions in one write (one Undo). Transfers take both legs.
+  Future<WriteResult> deleteTxns(Iterable<String> ids) {
+    final cs = ChangeSet();
+    for (final id in ids) {
+      final t = _txns[id];
+      if (t == null) continue;
+      cs.delete(Db.txns, t.id);
+      final other = counterpart(t);
+      if (other != null) cs.delete(Db.txns, other.id);
+    }
     return _commit(cs);
+  }
+
+  // Categories
+
+  Future<WriteResult> createCategory({
+    required String accountId,
+    required String name,
+    required String emoji,
+    required int color,
+  }) {
+    final existing = categoriesFor(accountId);
+    final maxOrder = existing.fold<int>(-1, (m, c) => c.sortOrder > m ? c.sortOrder : m);
+    final c = Category(
+      id: newId(),
+      accountId: accountId,
+      name: name.trim(),
+      emoji: emoji,
+      color: color,
+      // New categories go to the end of the list.
+      sortOrder: maxOrder + 1,
+      createdAt: DateTime.now(),
+    );
+    return _commit(ChangeSet()..put(Db.categories, c.id, c.toMap()));
+  }
+
+  Future<WriteResult> updateCategory(Category c) =>
+      _commit(ChangeSet()..put(Db.categories, c.id, c.copyWith(name: c.name.trim()).toMap()));
+
+  Future<WriteResult> reorderCategories(List<String> orderedIds) {
+    final cs = ChangeSet();
+    for (var i = 0; i < orderedIds.length; i++) {
+      final c = _categories[orderedIds[i]];
+      if (c != null && c.sortOrder != i) cs.put(Db.categories, c.id, c.copyWith(sortOrder: i).toMap());
+    }
+    return _commit(cs);
+  }
+
+  /// Deletes categories. Their transactions move to [reassignToId], or are deleted
+  /// when it is null. Defaults pointing at a deleted category are cleared.
+  Future<WriteResult> deleteCategories(Set<String> ids, {String? reassignToId}) async {
+    final now = DateTime.now();
+    final cs = ChangeSet();
+    final accountIds = <String>{};
+    for (final id in ids) {
+      final c = _categories[id];
+      if (c == null) continue;
+      accountIds.add(c.accountId);
+      cs.delete(Db.categories, id);
+    }
+    for (final t in _txns.values) {
+      if (t.categoryId == null || !ids.contains(t.categoryId)) continue;
+      if (reassignToId == null) {
+        cs.delete(Db.txns, t.id);
+      } else {
+        cs.put(Db.txns, t.id, t.copyWith(categoryId: reassignToId, updatedAt: now).toMap());
+      }
+    }
+    final r = await _commit(cs);
+    if (r.success) {
+      for (final acc in accountIds) {
+        for (final type in [TxnType.expense, TxnType.income]) {
+          final key = _defaultKey(acc, type);
+          if (ids.contains(_db.setting<String>(key))) {
+            try {
+              await _db.setSetting(key, null);
+            } catch (_) {
+              // A stale default is harmless: the Add sheet falls back automatically.
+            }
+          }
+        }
+      }
+    }
+    return r;
+  }
+
+  Future<void> setDefaultCategory(String accountId, TxnType type, String categoryId) async {
+    try {
+      await _db.setSetting(_defaultKey(accountId, type), categoryId);
+    } catch (_) {
+      ErrorReporter.saveFailed();
+    }
+    _changed();
   }
 }

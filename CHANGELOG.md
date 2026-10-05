@@ -3,6 +3,46 @@
 This file lists every Ledgerly release, newest first. It loosely follows the
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format, and dates are `YYYY-MM-DD`.
 
+## [0.2.0] - 2026-10-05
+
+Second milestone (M2): the full Transactions tab and category management.
+
+### Added
+- **Transactions tab**
+  - **Search** by description, category or notes. Results update as you type.
+  - **Month navigator** (◂ October 2026 ▸) showing the month's In and Out totals.
+    - Tap the month to pick one of the last 12 months, or All time.
+    - Months follow the account's month cycle, so they stay in step once custom cycles arrive.
+  - **Filter sheet** on one scrolling page, with a live "Show N results" button:
+    - date presets (Today, This week, This month, Last month, Last 3 months, This year, All time) and a custom date range
+    - type
+    - accounts (to view several accounts together)
+    - categories, with a search box when there are many
+    - amount min / max, with a check that min isn't above max
+    - Counting: All / Counted / Excluded
+  - **Active filter chips**, each removable, including a chip for the Counting filter.
+  - **Summary line** while filtering: the result count, income, expense, how many rows are excluded, and a warning when the results mix currencies.
+  - **10 sort options**: newest, oldest, highest, lowest, category A–Z / Z–A, two type orders, account A–Z / Z–A. Your choice is remembered.
+  - **Day headers** stay pinned at the top while you scroll, and show each day's net total. Only the date sorts group by day.
+  - **Swipe left to delete** (with a confirmation), and **long-press to select** several rows: select all, delete selected. Every delete can be undone.
+  - **Empty states** for a period with no transactions and for filters with no matches.
+- **Home links**
+  - The Income and Expense pills open the list filtered to that type, for the period shown on Home.
+  - The › on a breakdown row opens that category's transactions.
+- **Categories** (Settings → This account → Categories)
+  - Add and edit, with a live preview chip, emoji grid and colour picker.
+  - Names must be unique within an account.
+  - Search, drag to reorder, and long-press to select several.
+  - Delete moves the category's transactions to another category, or deletes them, with Undo.
+  - You can't delete your last category.
+- **Default categories**: choose which category Expense and Income start with in the Add sheet.
+- **Settings** gains a **"This account"** group, tinted in the account's colour, with a Switch button. Each row in it carries a small account badge.
+
+### Changed
+- New categories go to the end of the list.
+- Deleting a category clears any default category setting that pointed to it.
+- The Add sheet's "More" category grid is now the shared category picker, with search.
+
 ## [0.1.0] - 2026-10-05
 
 First milestone (M1): the foundation and the core money flow.

@@ -10,6 +10,7 @@ import '../../domain/ledger_math.dart';
 import '../../models/account.dart';
 import '../../models/txn.dart';
 import '../../state/ledger_store.dart';
+import '../../state/txn_filter_store.dart';
 import '../add/add_txn_sheet.dart';
 import '../detail/txn_detail_sheet.dart';
 import '../sheets/account_sheets.dart';
@@ -31,6 +32,16 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _allTime = false;
   TxnType _breakdownType = TxnType.expense;
   String? _highlighted;
+
+  /// Opens the Transactions tab filtered to what was tapped, for the period shown here.
+  void _openList(BuildContext context, {required TxnType type, String? categoryName}) {
+    context.read<TxnFilterStore>().openFromHome(
+          type: type,
+          categoryName: categoryName,
+          allTime: _allTime,
+        );
+    ShellNav.maybeOf(context)?.goTo(AppShell.transactions);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _allTime = all;
             _highlighted = null;
           }),
-          onStatTap: () => ShellNav.maybeOf(context)?.goTo(AppShell.transactions),
+          onStatTap: (type) => _openList(context, type: type),
         ),
         if (store.accounts.length > 1) ...[
           const SizedBox(height: 20),
@@ -91,6 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _highlighted = null;
           }),
           onHighlight: (id) => setState(() => _highlighted = id == _highlighted ? null : id),
+          onOpenCategory: (name) => _openList(context, type: _breakdownType, categoryName: name),
         ),
         const SizedBox(height: 20),
         SectionHeader(
@@ -194,7 +206,7 @@ class _HeroCard extends StatelessWidget {
   final double expense;
   final bool allTime;
   final ValueChanged<bool> onPeriod;
-  final VoidCallback onStatTap;
+  final ValueChanged<TxnType> onStatTap;
 
   @override
   Widget build(BuildContext context) {
@@ -268,7 +280,7 @@ class _HeroCard extends StatelessWidget {
                     icon: Icons.arrow_upward_rounded,
                     label: s.statIncome,
                     value: formatMoney(income, currency, whole: true),
-                    onTap: onStatTap,
+                    onTap: () => onStatTap(TxnType.income),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -277,7 +289,7 @@ class _HeroCard extends StatelessWidget {
                     icon: Icons.arrow_downward_rounded,
                     label: s.statExpense,
                     value: formatMoney(expense, currency, whole: true),
-                    onTap: onStatTap,
+                    onTap: () => onStatTap(TxnType.expense),
                   ),
                 ),
               ],
@@ -444,6 +456,7 @@ class _BreakdownCard extends StatelessWidget {
     required this.highlighted,
     required this.onType,
     required this.onHighlight,
+    required this.onOpenCategory,
   });
 
   final Account account;
@@ -452,6 +465,7 @@ class _BreakdownCard extends StatelessWidget {
   final String? highlighted;
   final ValueChanged<TxnType> onType;
   final ValueChanged<String> onHighlight;
+  final ValueChanged<String> onOpenCategory;
 
   static const String otherId = '__other';
 
@@ -546,9 +560,7 @@ class _BreakdownCard extends StatelessWidget {
                 fraction: breakdown.largest <= 0 ? 0 : e.amount / breakdown.largest,
                 dimmed: highlighted != null && highlighted != (e.categoryId ?? otherId),
                 onTap: () => onHighlight(e.categoryId ?? otherId),
-                onOpen: e.isOther
-                    ? null
-                    : () => ShellNav.maybeOf(context)?.goTo(AppShell.transactions),
+                onOpen: e.isOther ? null : () => onOpenCategory(meta(e).$2),
                 openLabel: s.seeCategoryTransactions(meta(e).$2),
               ),
           ],
