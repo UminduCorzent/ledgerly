@@ -1,0 +1,67 @@
+# Ledgerly
+
+A fast, private personal finance tracker for Android, built with Flutter. It works fully offline,
+and everything stays on your device.
+
+**Specs:**
+- What the app does: `finance_tracker/docs/NEW_APP_CORE_SCOPE.md`
+- How it looks and feels: `finance_tracker/docs/NEW_APP_UI_DESIGN.md`
+- Version history: [CHANGELOG.md](CHANGELOG.md)
+
+---
+
+## Testing without Flutter on this computer
+
+Every push to `main` triggers a GitHub Actions build (`.github/workflows/build.yml`) that does this:
+
+1. Checks the code and runs all unit tests.
+2. Builds the exact app as a **web preview** and as an **Android APK**.
+3. Publishes both to GitHub Pages.
+
+### One-time setup
+1. On github.com, create a new **public** repository named `ledgerly`. Leave it empty: no README, no licence.
+2. In this folder (`Desktop/ledgerly`), run:
+   ```
+   git remote add origin https://github.com/<your-username>/ledgerly.git
+   git push -u origin main
+   ```
+3. In the repo on GitHub, go to **Settings → Pages → Build and deployment → Source** and choose **GitHub Actions**.
+4. Open the **Actions** tab and wait for "Build & preview" to finish (about 6–8 minutes).
+   - If it failed before step 3 was done, click **Re-run all jobs**.
+
+### After every update
+1. Run `git push`.
+2. When the build is green, open the preview and download page:
+
+| What | Address |
+|---|---|
+| Web preview (open on this computer) | `https://<your-username>.github.io/ledgerly/` |
+| APK for your phone | `https://<your-username>.github.io/ledgerly/downloads/` |
+
+**Version check:** Settings → About shows the version and build number, such as `0.1.0 · build 7 · a1b2c3d`. Use it to confirm you're testing the latest build.
+
+**APK install:** the APK is signed with a debug key. Android will ask you to allow installing from your browser. Installing a newer build over an older one keeps your data.
+
+**Web-preview limits:** a few phone-only features don't run in the browser preview:
+- biometric unlock
+- screenshot blocking
+- haptics
+- the Android share sheet
+
+Check these on the phone. Everything else behaves the same.
+
+**If a build fails:** open the failed run on the Actions tab, copy the red error text and paste it to Claude.
+
+---
+
+## Running on a computer that has Flutter
+
+The `android/` and `web/` folders aren't fully committed; they're generated. The first time, run:
+
+```
+flutter create --org com.ledgerly --project-name ledgerly --platforms=android,web .
+flutter pub get
+flutter run
+```
+
+`flutter create` only adds missing files. It never overwrites the customised files that are committed.

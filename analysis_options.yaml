@@ -1,0 +1,11 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    strict-casts: false
+
+linter:
+  rules:
+    prefer_final_locals: true
+    prefer_single_quotes: true
+    avoid_print: true
