@@ -1,5 +1,6 @@
 import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
+// foundation.dart has its own `Category` annotation, which clashes with our model.
+import 'package:flutter/foundation.dart' hide Category;
 import 'package:uuid/uuid.dart';
 
 import '../core/strings/app_strings.dart';
@@ -229,8 +230,9 @@ class LedgerStore extends ChangeNotifier {
         DateTime? day;
         var bucket = <Txn>[];
         void flush() {
-          if (day == null || bucket.isEmpty) return;
-          groups.add(DayGroup(day!, List.unmodifiable(bucket), totalsOf(bucket).net));
+          final d = day;
+          if (d == null || bucket.isEmpty) return;
+          groups.add(DayGroup(d, List.unmodifiable(bucket), totalsOf(bucket).net));
         }
 
         for (final t in txnsFor(accountId)) {

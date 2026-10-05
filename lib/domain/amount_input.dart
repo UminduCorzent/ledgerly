@@ -1,5 +1,5 @@
-/// Keypad input rules for the Add sheet. The amount is kept as the raw typed
-/// string (so "12." and "12.50" display exactly as typed) and parsed on save.
+// Keypad input rules for the Add sheet. The amount is kept as the raw typed
+// string (so "12." and "12.50" display exactly as typed) and parsed on save.
 
 const String kKeyBackspace = 'back';
 const String kKeyDecimal = '.';

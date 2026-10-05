@@ -120,9 +120,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
             buildDefaultDragHandles: false,
             itemCount: order.length,
-            onReorder: (from, to) {
+            // onReorderItem already adjusts `to` for the removed item.
+            onReorderItem: (from, to) {
               setState(() {
-                if (to > from) to -= 1;
                 final id = order.removeAt(from);
                 order.insert(to, id);
               });
