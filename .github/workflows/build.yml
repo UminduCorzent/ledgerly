@@ -49,7 +49,9 @@ jobs:
 
       - name: Read version
         id: ver
-        run: echo "version=$(grep '^version:' pubspec.yaml | sed 's/version: //; s/+.*//')" >> "$GITHUB_OUTPUT"
+        # Block scalar: the command contains ": " which plain YAML would misread as a key.
+        run: |
+          echo "version=$(grep '^version:' pubspec.yaml | sed 's/version: //; s/+.*//')" >> "$GITHUB_OUTPUT"
 
       - name: Build web
         run: |
