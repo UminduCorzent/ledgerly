@@ -40,7 +40,9 @@ class _CreatePinScreenState extends State<_CreatePinScreen> {
     final s = AppStrings.of(context);
     final confirming = _first != null;
     return Scaffold(
+      // Expand: without it the Stack sizes itself to the small close button.
       body: Stack(
+        fit: StackFit.expand,
         children: [
           Positioned.fill(
             child: PinBackground(
@@ -99,7 +101,9 @@ class _VerifyPinScreenState extends State<_VerifyPinScreen> {
     final lock = context.watch<LockStore>();
     final until = lock.lockoutRemaining == null ? null : DateTime.now().add(lock.lockoutRemaining!);
     return Scaffold(
+      // Expand: without it the Stack sizes itself to the small close button.
       body: Stack(
+        fit: StackFit.expand,
         children: [
           Positioned.fill(
             child: PinBackground(
@@ -136,7 +140,10 @@ class _CloseButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
+    return Positioned(
+      top: 0,
+      left: 0,
+      child: SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(8),
         child: IconButton(
@@ -144,6 +151,7 @@ class _CloseButton extends StatelessWidget {
           onPressed: () => Navigator.maybePop(context),
           icon: const Icon(Icons.close_rounded, color: Colors.white),
         ),
+      ),
       ),
     );
   }
