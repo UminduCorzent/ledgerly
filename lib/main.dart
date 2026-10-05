@@ -6,6 +6,7 @@ import 'core/strings/app_strings.dart';
 import 'core/theme/app_theme.dart';
 import 'data/db.dart';
 import 'state/ledger_store.dart';
+import 'state/lock_store.dart';
 import 'state/settings_store.dart';
 import 'state/txn_filter_store.dart';
 
@@ -26,10 +27,13 @@ Future<void> _boot() async {
   final settings = SettingsStore(db)..load();
   final ledger = LedgerStore(db)..load();
   final filters = TxnFilterStore(ledger, db);
+  final lock = LockStore(db)..load();
+  WidgetsBinding.instance.addObserver(lock);
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider<SettingsStore>.value(value: settings),
+        ChangeNotifierProvider<LockStore>.value(value: lock),
         ChangeNotifierProvider<LedgerStore>.value(value: ledger),
         ChangeNotifierProvider<TxnFilterStore>.value(value: filters),
       ],

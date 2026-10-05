@@ -7,6 +7,7 @@ import 'core/theme/motion.dart';
 import 'state/error_reporter.dart';
 import 'state/ledger_store.dart';
 import 'state/settings_store.dart';
+import 'ui/lock/lock_gate.dart';
 import 'ui/shell/app_shell.dart';
 import 'ui/welcome/welcome_screen.dart';
 
@@ -24,6 +25,8 @@ class LedgerlyApp extends StatelessWidget {
       themeMode: mode,
       themeAnimationDuration: Motion.standard,
       scaffoldMessengerKey: appMessengerKey,
+      navigatorKey: appNavigatorKey,
+      builder: (context, child) => LockGate(child: child ?? const SizedBox.shrink()),
       home: const _Gate(),
     );
   }

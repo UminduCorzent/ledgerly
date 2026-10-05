@@ -27,11 +27,20 @@ String fullDateTime(DateTime d) => '${_full.format(d)} · ${_time.format(d)}';
 String monthYear(DateTime d) => _monthYear.format(d);
 
 /// "1 – 31 Oct", "25 Sep – 24 Oct", or "25 Sep – ongoing".
-String rangeLabel(DateRange r, {String ongoing = 'ongoing'}) {
+String rangeLabel(DateRange r, AppStrings s) {
   final last = r.lastDay;
-  if (last == null) return '${_dayMonth.format(r.start)} – $ongoing';
+  if (last == null) return '${_dayMonth.format(r.start)} – ${s.ongoing}';
   if (r.start.month == last.month && r.start.year == last.year) {
     return '${r.start.day} – ${_dayMonth.format(last)}';
   }
   return '${_dayMonth.format(r.start)} – ${_dayMonth.format(last)}';
+}
+
+/// "October 2026" for an exact calendar month, otherwise the date range.
+String cycleLabel(DateRange r, AppStrings s) {
+  final end = r.end;
+  final isCalendarMonth = r.start.day == 1 &&
+      end != null &&
+      end == DateTime(r.start.year, r.start.month + 1, 1);
+  return isCalendarMonth ? monthYear(r.start) : rangeLabel(r, s);
 }

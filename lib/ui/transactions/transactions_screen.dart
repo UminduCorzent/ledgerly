@@ -362,11 +362,11 @@ String _periodName(AppStrings s, TxnFilterStore f) {
       {
         final p = f.customPreset;
         if (p != null) return s.presetLabel(p.name);
-        return r == null ? s.customRange : rangeLabel(r);
+        return r == null ? s.customRange : rangeLabel(r, s);
       }
     case PeriodKind.month:
       if (r == null) return s.allTime;
-      return r.start.day == 1 ? monthYear(r.start) : rangeLabel(r);
+      return cycleLabel(r, s);
   }
 }
 
@@ -486,7 +486,7 @@ class _PeriodNavigator extends StatelessWidget {
                   children: [
                     for (final cy in cycles)
                       ListTile(
-                        title: Text(cy.start.day == 1 ? monthYear(cy.start) : rangeLabel(cy)),
+                        title: Text(cycleLabel(cy, s)),
                         onTap: () => Navigator.pop(ctx, cy),
                       ),
                     ListTile(

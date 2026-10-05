@@ -241,7 +241,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                           avatar: const Icon(Icons.date_range_rounded, size: 18),
                           label: Text(
                             _kind == PeriodKind.custom && _preset == null && r != null
-                                ? rangeLabel(r)
+                                ? rangeLabel(r, s)
                                 : s.pickCustomRange,
                           ),
                           onPressed: _pickCustom,

@@ -3,6 +3,41 @@
 This file lists every Ledgerly release, newest first. It loosely follows the
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format, and dates are `YYYY-MM-DD`.
 
+## [0.3.0] - 2026-10-05
+
+Third milestone (M3): month cycles, App Lock and the rest of Settings.
+
+### Added
+- **Month cycle** per account (Settings → This account → Month cycle).
+  - **Fixed day**: every month starts on day 1–31. In shorter months it falls on the last day.
+  - **Payday**: each month starts on your own qualifying income.
+    - Choose which categories count as payday, and a minimum amount.
+    - A **cooldown** (default 20 days) stops a bonus or refund from starting a new month.
+    - You can **pin** a start date if a payday isn't recorded.
+    - Before your first payday, a fallback start day is used.
+    - The latest cycle stays **open** ("25 Sep – ongoing") until the next payday is recorded.
+    - Income marked "Exclude from totals" never starts a cycle.
+  - The screen shows the current cycle and the most recent detected cycle starts.
+  - The cycle drives "this month" everywhere:
+    - the Home balance card and breakdown
+    - the Transactions month navigator and the 12-month picker
+    - the This month and Last month filter presets
+  - Home shows **"Cycle running long · Day N"** when an open payday cycle is longer than your usual gap between paydays.
+- **App Lock** (Settings → Security).
+  - **4-digit PIN**, set up with a confirmation step. It's stored only as a salted PBKDF2-HMAC-SHA256 hash: 100,000 rounds on the phone, fewer in the web preview, and the round count is stored with the hash.
+  - Turning the lock off requires your PIN. Changing your PIN requires your current PIN first.
+  - **Lock screen** on launch, and when you return after the **auto-lock** time: immediately, 30 seconds, or 1, 5, 10 or 30 minutes (default 1 minute).
+  - Locking closes any open sheet or page underneath.
+  - **Lockout after wrong PINs**: 5 tries → 30 s, 8 → 2 min, 10 → 5 min, with a live countdown.
+    - The lockout survives restarting the app.
+  - **Biometric unlock** (phone only). The system prompt opens automatically on the lock screen, with the device PIN or pattern as a fallback.
+    - Turning biometric unlock on or off needs a successful biometric check.
+- **Screenshot blocking** on Android: no screenshots or screen recording, and no preview in the recent-apps screen. It's always on.
+
+### Changed
+- Android now uses `FlutterFragmentActivity` (required for the biometric prompt) and declares `USE_BIOMETRIC`.
+- Date ranges for open cycles show "ongoing" instead of an end date.
+
 ## [0.2.0] - 2026-10-05
 
 Second milestone (M2): the full Transactions tab and category management.

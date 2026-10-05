@@ -74,7 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _HeroCard(
           label: summary.range == null
               ? s.balanceAllTime
-              : s.balanceForRange(rangeLabel(summary.range!)),
+              : s.balanceForRange(rangeLabel(summary.range!, s)),
           balance: summary.balance,
           currency: account.currency,
           income: summary.totals.income,
@@ -86,6 +86,11 @@ class _HomeScreenState extends State<HomeScreen> {
           }),
           onStatTap: (type) => _openList(context, type: type),
         ),
+        if (!_allTime && store.cycleRunningLongDay(account.id, now) != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: _RunningLongChip(day: store.cycleRunningLongDay(account.id, now)!),
+          ),
         if (store.accounts.length > 1) ...[
           const SizedBox(height: 20),
           SectionHeader(title: s.accountsTitle),
@@ -667,6 +672,44 @@ class _RankRow extends StatelessWidget {
                         onPressed: onOpen,
                         icon: Icon(Icons.chevron_right_rounded, color: c.muted),
                       ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Warning chip when a payday cycle has run past its usual length.
+class _RunningLongChip extends StatelessWidget {
+  const _RunningLongChip({required this.day});
+
+  final int day;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final s = AppStrings.of(context);
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Tooltip(
+        message: s.runningLongBody,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(color: c.warnBg, borderRadius: BorderRadius.circular(999)),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.schedule_rounded, size: 16, color: c.warn),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  s.runningLong(day),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: c.warn, fontWeight: FontWeight.w700, fontSize: 12.5),
+                ),
               ),
             ],
           ),

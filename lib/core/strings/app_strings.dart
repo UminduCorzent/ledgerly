@@ -316,6 +316,83 @@ class AppStrings {
   String categoriesCount(int n) => '$n categor${n == 1 ? 'y' : 'ies'}';
   String accountScopeHint(String name) => 'Settings in this group change only $name.';
 
+  // Month cycle
+  String get monthCycle => 'Month cycle';
+  String get cycleSummaryCalendar => 'Calendar month';
+  String cycleSummaryDay(int d) => 'Starts on day $d';
+  String get cycleSummaryPayday => 'Starts on payday';
+  String get currentCycle => 'Current cycle';
+  String get ongoing => 'ongoing';
+  String runningLong(int day) => 'Cycle running long · Day $day';
+  String get runningLongBody => 'Your next payday hasn’t been recorded yet.';
+  String get cycleModeFixed => 'Fixed day';
+  String get cycleModePayday => 'Payday';
+  String get cycleModeFixedBody => 'Every month starts on the same day.';
+  String get cycleModePaydayBody =>
+      'Each month starts when your salary arrives, even if the date moves around.';
+  String get startDayTitle => 'Start day';
+  String get fallbackStartDayTitle => 'Fallback start day';
+  String get fallbackStartDayBody => 'Used for dates before your first recorded payday.';
+  String dayN(int d) => 'Day $d';
+  String get calendarMonthHint => 'Day 1 means the calendar month.';
+  String get shortMonthHint => 'In shorter months the cycle starts on the last day.';
+  String get paydayCategories => 'Payday categories';
+  String get paydayCategoriesAny => 'Any income counts';
+  String paydayCategoriesCount(int n) => '$n selected';
+  String get minimumAmount => 'Minimum amount';
+  String get minimumAmountBody => 'Smaller income won’t start a new month.';
+  String get cooldown => 'Cooldown';
+  String get cooldownBody => 'Income within this many days of a payday stays in the same month.';
+  String daysN(int n) => '$n day${n == 1 ? '' : 's'}';
+  String get decrease => 'Decrease';
+  String get increase => 'Increase';
+  String get detectedStarts => 'Detected cycle starts';
+  String get noDetectedStarts =>
+      'No payday found yet. Add an income transaction, or pin a start date below.';
+  String get pinnedManually => 'Pinned manually';
+  String get pinStart => 'Pinned start date';
+  String get pinStartBody => 'Use this if your latest payday isn’t recorded.';
+  String get notSet => 'Not set';
+  String get clearPin => 'Clear pinned date';
+
+  // Security
+  String get securityTitle => 'Security';
+  String get appLock => 'App lock';
+  String get appLockBody => 'Ask for your PIN when opening Ledgerly';
+  String get biometricUnlock => 'Biometric unlock';
+  String get biometricBody => 'Fingerprint or face, with your PIN as backup';
+  String get biometricUnavailable => 'Biometric unlock isn’t available on this device';
+  String get biometricReason => 'Unlock Ledgerly';
+  String get biometricConfirmReason => 'Confirm it’s you';
+  String get biometricFailed => 'Biometric check didn’t succeed';
+  String get useBiometric => 'Use biometrics';
+  String get changePin => 'Change PIN';
+  String get autoLock => 'Auto-lock';
+  String autoLockLabel(int seconds) => switch (seconds) {
+        0 => 'Immediately',
+        30 => 'After 30 seconds',
+        60 => 'After 1 minute',
+        300 => 'After 5 minutes',
+        600 => 'After 10 minutes',
+        _ => 'After 30 minutes',
+      };
+  String get autoLockBody => 'How long Ledgerly can stay in the background before it locks.';
+  String get pinCreateTitle => 'Create a PIN';
+  String get pinCreateBody => 'Choose 4 digits you’ll remember.';
+  String get pinConfirmTitle => 'Confirm your PIN';
+  String get pinConfirmBody => 'Enter the same 4 digits again.';
+  String get pinMismatch => 'Those PINs didn’t match. Try again.';
+  String get pinEnterTitle => 'Enter your PIN';
+  String get pinCurrentTitle => 'Enter your current PIN';
+  String get pinNewTitle => 'Choose a new PIN';
+  String get pinWrong => 'Wrong PIN';
+  String pinLockedOut(int seconds) => 'Too many tries. Try again in ${seconds}s.';
+  String pinProgress(int n) => '$n of 4 digits entered';
+  String get appLockOn => 'App lock is on';
+  String get appLockOff => 'App lock is off';
+  String get pinChanged => 'PIN changed';
+  String get lockedTitle => 'Ledgerly is locked';
+
   // Seeded categories (order matters — see domain/seeds.dart)
   List<String> get seedCategoryNames => const [
         'Food',

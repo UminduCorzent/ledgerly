@@ -201,9 +201,79 @@ class LedgerStore extends ChangeNotifier {
         return map;
       });
 
-  /// The month cycle containing [date] for [accountId]. Calendar month for now;
-  /// the per-account month-cycle setting plugs in here.
-  DateRange cycleContaining(String accountId, DateTime date) => fixedDayCycle(date, 1);
+  // Month cycle
+
+  static String _cycleKey(String accountId) => 'cycle_$accountId';
+
+  CycleConfig cycleConfig(String accountId) => _cached(
+        'cycleCfg:$accountId',
+        () => CycleConfig.fromMap(_db.setting<Map<dynamic, dynamic>>(_cycleKey(accountId))),
+      );
+
+  Future<void> setCycleConfig(String accountId, CycleConfig config) async {
+    try {
+      await _db.setSetting(_cycleKey(accountId), config.toMap());
+    } catch (_) {
+      ErrorReporter.saveFailed();
+    }
+    _changed();
+  }
+
+  bool _qualifiesAsPayday(Txn t, CycleConfig cfg) =>
+      t.type == TxnType.income &&
+      t.isCounted && // a tracking-only income can never start a cycle
+      t.amount >= cfg.minAmount &&
+      (cfg.anchorCategoryIds.isEmpty || cfg.anchorCategoryIds.contains(t.categoryId));
+
+  /// Payday cycle starts for [accountId], ascending (the manual pin included).
+  List<DateTime> cycleAnchors(String accountId) => _cached('anchors:$accountId', () {
+        final cfg = cycleConfig(accountId);
+        final dates = <DateTime>[
+          for (final t in txnsFor(accountId))
+            if (_qualifiesAsPayday(t, cfg)) t.date,
+          if (cfg.pinnedStart != null) cfg.pinnedStart!,
+        ];
+        return List<DateTime>.unmodifiable(anchorsFrom(dates, cfg.cooldownDays));
+      });
+
+  /// The most recent detected cycle starts, newest first, each with the largest
+  /// qualifying income on that day (null for a manual pin with no income).
+  List<(DateTime, Txn?)> recentCycleStarts(String accountId, {int limit = 6}) {
+    final cfg = cycleConfig(accountId);
+    final anchors = cycleAnchors(accountId);
+    final out = <(DateTime, Txn?)>[];
+    for (final a in anchors.reversed.take(limit)) {
+      Txn? best;
+      for (final t in txnsFor(accountId)) {
+        if (!_qualifiesAsPayday(t, cfg)) continue;
+        if (t.date.year == a.year && t.date.month == a.month && t.date.day == a.day) {
+          if (best == null || t.amount > best.amount) best = t;
+        }
+      }
+      out.add((a, best));
+    }
+    return out;
+  }
+
+  /// The month cycle containing [date] for [accountId].
+  DateRange cycleContaining(String accountId, DateTime date) {
+    final cfg = cycleConfig(accountId);
+    if (cfg.mode == CycleMode.payday) {
+      return anchoredCycle(date, cycleAnchors(accountId), fallbackStartDay: cfg.startDay);
+    }
+    return fixedDayCycle(date, cfg.startDay);
+  }
+
+  /// Day number within an open payday cycle that has run past its usual
+  /// length (median gap between paydays), else null.
+  int? cycleRunningLongDay(String accountId, DateTime now) {
+    final cfg = cycleConfig(accountId);
+    if (cfg.mode != CycleMode.payday) return null;
+    final current = cycleContaining(accountId, now);
+    if (!current.isOpen) return null;
+    final day = daysBetween(current.start, now) + 1;
+    return day > typicalCycleLength(cycleAnchors(accountId)) ? day : null;
+  }
 
   /// The current "This month" for [accountId].
   DateRange currentCycle(String accountId, DateTime now) => cycleContaining(accountId, now);

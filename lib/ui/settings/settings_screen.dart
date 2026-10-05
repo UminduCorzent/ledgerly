@@ -4,12 +4,17 @@ import 'package:provider/provider.dart';
 import '../../core/app_info.dart';
 import '../../core/strings/app_strings.dart';
 import '../../core/theme/tokens.dart';
+import '../../domain/month_cycle.dart';
 import '../../models/txn.dart';
 import '../../state/ledger_store.dart';
+import '../../state/lock_store.dart';
 import '../../state/settings_store.dart';
 import '../accounts/accounts_screen.dart';
 import '../categories/categories_screen.dart';
 import '../categories/default_categories_sheet.dart';
+import '../lock/pin_screens.dart';
+import '../month_cycle/month_cycle_screen.dart';
+import '../widgets/common.dart';
 import '../sheets/account_sheets.dart';
 import '../widgets/emoji_avatar.dart';
 import '../widgets/segmented.dart';
@@ -46,6 +51,11 @@ class SettingsScreen extends StatelessWidget {
               onChanged: settings.setThemeMode,
             ),
           ),
+        ]),
+        const SizedBox(height: 10),
+        const _SecurityGroup(),
+        const SizedBox(height: 10),
+        _Group(children: [
           _Row(
             icon: Icons.account_balance_wallet_outlined,
             title: s.settingsAccounts,
@@ -136,6 +146,16 @@ class _AccountGroup extends StatelessWidget {
                   ],
                 ),
               ),
+              _Row(
+                icon: Icons.calendar_month_outlined,
+                title: s.monthCycle,
+                subtitle: _cycleSummary(s, ledger.cycleConfig(account.id)),
+                badge: badge,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const MonthCycleScreen()),
+                ),
+              ),
+              Divider(height: 1, indent: 60, color: c.line),
               _Row(
                 icon: Icons.category_outlined,
                 title: s.categoriesTitle,
@@ -243,6 +263,7 @@ class _Row extends StatelessWidget {
     this.onTap,
     this.below,
     this.badge,
+    this.trailing,
   });
 
   final IconData icon;
@@ -252,6 +273,7 @@ class _Row extends StatelessWidget {
   final VoidCallback? onTap;
   final Widget? below;
   final Widget? badge;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -288,6 +310,7 @@ class _Row extends StatelessWidget {
               if (badge != null) ...[badge!, const SizedBox(width: 4)],
               if (value != null)
                 Text(value!, style: TextStyle(color: c.muted, fontSize: 13)),
+              if (trailing != null) trailing!,
               if (onTap != null) Icon(Icons.chevron_right_rounded, color: c.muted),
             ],
           ),
@@ -296,5 +319,152 @@ class _Row extends StatelessWidget {
       ),
     );
     return onTap == null ? content : InkWell(onTap: onTap, child: content);
+  }
+}
+
+String _cycleSummary(AppStrings s, CycleConfig cfg) {
+  if (cfg.mode == CycleMode.payday) return s.cycleSummaryPayday;
+  return cfg.startDay <= 1 ? s.cycleSummaryCalendar : s.cycleSummaryDay(cfg.startDay);
+}
+
+/// App lock, biometrics, change PIN and auto-lock (app-wide).
+class _SecurityGroup extends StatefulWidget {
+  const _SecurityGroup();
+
+  @override
+  State<_SecurityGroup> createState() => _SecurityGroupState();
+}
+
+class _SecurityGroupState extends State<_SecurityGroup> {
+  bool _bioAvailable = false;
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<LockStore>().biometricAvailable().then((v) {
+      if (mounted) setState(() => _bioAvailable = v);
+    });
+  }
+
+  Future<void> _toggleLock(bool on) async {
+    final s = AppStrings.of(context);
+    final lock = context.read<LockStore>();
+    if (on) {
+      final pin = await createPinFlow(context);
+      if (pin == null || !mounted) return;
+      await lock.enable(pin);
+      if (mounted) showSnack(context, s.appLockOn);
+    } else {
+      final ok = await verifyPinFlow(context);
+      if (!ok || !mounted) return;
+      await lock.disable();
+      if (mounted) showSnack(context, s.appLockOff);
+    }
+  }
+
+  Future<void> _toggleBiometric(bool on) async {
+    final s = AppStrings.of(context);
+    final lock = context.read<LockStore>();
+    // Both turning it on and off need a successful biometric check.
+    final ok = await lock.authenticate(s.biometricConfirmReason);
+    if (!mounted) return;
+    if (!ok) {
+      showSnack(context, s.biometricFailed);
+      return;
+    }
+    await lock.setBiometric(on);
+  }
+
+  Future<void> _changePin() async {
+    final s = AppStrings.of(context);
+    final lock = context.read<LockStore>();
+    final ok = await verifyPinFlow(context);
+    if (!ok || !mounted) return;
+    final pin = await createPinFlow(context, changing: true);
+    if (pin == null || !mounted) return;
+    await lock.changePin(pin);
+    if (mounted) showSnack(context, s.pinChanged);
+  }
+
+  Future<void> _pickTimeout() async {
+    final s = AppStrings.of(context);
+    final lock = context.read<LockStore>();
+    final c = context.colors;
+    final picked = await showModalBottomSheet<int>(
+      context: context,
+      useSafeArea: true,
+      builder: (ctx) => SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+              child: Text(s.autoLock, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text(s.autoLockBody, style: TextStyle(color: c.muted)),
+            ),
+            for (final sec in LockStore.timeoutOptions)
+              ListTile(
+                title: Text(s.autoLockLabel(sec)),
+                trailing: sec == lock.timeoutSeconds ? Icon(Icons.check_rounded, color: c.primary) : null,
+                onTap: () => Navigator.pop(ctx, sec),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (picked != null) await lock.setTimeout(picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final c = context.colors;
+    final lock = context.watch<LockStore>();
+    final rows = <Widget>[
+      _Row(
+        icon: Icons.lock_outline_rounded,
+        title: s.appLock,
+        subtitle: s.appLockBody,
+        trailing: Switch(value: lock.enabled, onChanged: _toggleLock),
+      ),
+      if (lock.enabled) ...[
+        if (_bioAvailable)
+          _Row(
+            icon: Icons.fingerprint_rounded,
+            title: s.biometricUnlock,
+            subtitle: s.biometricBody,
+            trailing: Switch(value: lock.biometricEnabled, onChanged: _toggleBiometric),
+          ),
+        _Row(icon: Icons.pin_outlined, title: s.changePin, onTap: _changePin),
+        _Row(
+          icon: Icons.timer_outlined,
+          title: s.autoLock,
+          value: s.autoLockLabel(lock.timeoutSeconds),
+          onTap: _pickTimeout,
+        ),
+      ],
+    ];
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: c.line),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < rows.length; i++) ...[
+            if (i > 0) Divider(height: 1, indent: 60, color: c.line),
+            rows[i],
+          ],
+        ],
+      ),
+    );
   }
 }
