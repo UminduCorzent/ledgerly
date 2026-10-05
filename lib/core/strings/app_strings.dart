@@ -393,6 +393,129 @@ class AppStrings {
   String get pinChanged => 'PIN changed';
   String get lockedTitle => 'Ledgerly is locked';
 
+  // Settings rows for data
+  String get settingsExport => 'Export';
+  String get settingsExportBody => 'CSV, Excel or PDF';
+  String get settingsImport => 'Import';
+  String get settingsImportBody => 'CSV, Excel or JSON';
+  String get settingsBackup => 'Backup & restore';
+  String get settingsBackupBody => 'Save or restore all your data';
+
+  // Export
+  String get exportTitle => 'Export';
+  String get exportFormat => 'Format';
+  String get formatCsv => 'CSV';
+  String get formatCsvBody => 'Plain text that any spreadsheet opens';
+  String get formatExcel => 'Excel';
+  String get formatExcelBody => '.xlsx workbook';
+  String get formatPdf => 'PDF summary';
+  String get formatPdfBody => 'Totals and breakdowns, ready to print';
+  String get exportPeriod => 'Period';
+  String get exportAccounts => 'Accounts';
+  String exportButton(int n) => n == 0 ? 'Nothing to export' : 'Export $n transaction${n == 1 ? '' : 's'}';
+  String exportCapped(int n) => 'Only the newest $n transactions will be exported.';
+  String get excludedNoteTable => 'Excluded transactions are included and marked in the Excluded column.';
+  String get excludedNotePdf => 'Excluded transactions are left out of the PDF.';
+  String get fileReady => 'Your file is ready';
+  String get saveToDevice => 'Save to device';
+  String get download => 'Download';
+  String get shareFile => 'Share';
+  String get fileSaved => 'File saved';
+  String get fileFailed => 'Couldn’t create the file — try again';
+
+  // PDF report
+  String get pdfTitle => 'Ledgerly summary';
+  String get pdfPeriod => 'Period';
+  String get pdfAccounts => 'Accounts';
+  String get pdfGenerated => 'Generated';
+  String get pdfIncome => 'Income';
+  String get pdfExpense => 'Expense';
+  String get pdfNet => 'Net';
+  String get pdfByCategory => 'Spending by category';
+  String get pdfIncomeSources => 'Income sources';
+  String get pdfCategory => 'Category';
+  String get pdfAmount => 'Amount';
+  String get pdfShare => 'Share';
+  String pdfPage(int a, int b) => 'Page $a of $b';
+  String get pdfNoData => 'No transactions in this period.';
+
+  // Import
+  String get importTitle => 'Import';
+  String get importChooseBody =>
+      'CSV, Excel (.xlsx) or JSON. The file needs Date, Type and Amount columns; Account, Category, Description, Currency, Notes and Excluded are optional.';
+  String get importPick => 'Choose file';
+  String get importPickAnother => 'Choose another file';
+  String get importReading => 'Reading file…';
+  String importError(String name) => switch (name) {
+        'unsupportedFormat' => 'That file type isn’t supported. Choose a CSV, Excel or JSON file.',
+        'emptyFile' => 'This file has no rows to import.',
+        'missingColumns' => 'This file needs Date, Type and Amount columns.',
+        _ => 'This file couldn’t be read. Check that it’s a valid CSV, Excel or JSON file.',
+      };
+  String importFound(int n) => '$n transaction${n == 1 ? '' : 's'} found';
+  String importCantRead(int n) => '$n row${n == 1 ? '' : 's'} can’t be imported';
+  String skipReason(String name) => switch (name) {
+        'badType' => 'unknown type (use income, expense or transfer)',
+        'badAmount' => 'missing or invalid amount',
+        'badDate' => 'missing or unreadable date',
+        'duplicate' => 'already exists',
+        'unpairedTransfer' => 'transfer without a matching other account',
+        _ => 'unreadable row',
+      };
+  String rowLabel(int line) => 'Row $line';
+  String get importRows => 'Rows to import';
+  String importShowingFirst(int n) => 'Showing the first $n rows. The rest are imported as selected below.';
+  String get importAccounts => 'Accounts';
+  String get importMatchAccounts => 'Use the accounts named in the file';
+  String get importMatchBody => 'Accounts that don’t exist yet are created.';
+  String get importSingle => 'Put everything in one account';
+  String get importSingleBody => 'Transfers still use their own accounts.';
+  String get importNewTag => 'new';
+  String get importStrategy => 'Existing transactions';
+  String get addAllTitle => 'Add all';
+  String get addAllBody => 'Import every selected row.';
+  String get skipDupTitle => 'Skip duplicates';
+  String get skipDupBody => 'Skip rows matching an existing transaction: same account, day, type, category, description and amount.';
+  String get replaceTitle => 'Replace all';
+  String get replaceBody => 'Delete the transactions in these accounts first.';
+  String get replaceConfirmTitle => 'Replace existing transactions?';
+  String get replaceConfirmBody =>
+      'Every transaction in the accounts being imported into is deleted first. You can undo this right after.';
+  String get replaceAction => 'Replace';
+  String importButton(int n) => 'Import $n row${n == 1 ? '' : 's'}';
+  String importDone(int added, int skipped) => '$added added · $skipped skipped';
+  String importExtras(int accounts, int categories) => [
+        if (accounts > 0) '$accounts new account${accounts == 1 ? '' : 's'}',
+        if (categories > 0) '$categories new categor${categories == 1 ? 'y' : 'ies'}',
+      ].join(' · ');
+  String get viewWhy => 'View why';
+  String get skippedTitle => 'Skipped rows';
+
+  // Backup
+  String get backupTitle => 'Backup & restore';
+  String get backupNow => 'Back up now';
+  String get backupNowBody => 'A copy of all accounts, categories, transactions and settings.';
+  String get backupCreated => 'Backup created';
+  String get backupPrivacy =>
+      'Backups hold all your financial data as plain text. Your PIN and lock settings are never included. Keep backup files private.';
+  String get backupsOnDevice => 'Backups on this device';
+  String get backupsEmpty => 'No backups yet.';
+  String get backupKindSafety => 'Made before a restore';
+  String backupSize(String kb) => '$kb KB';
+  String get restore => 'Restore';
+  String get restoreFromFile => 'Restore from a file';
+  String get restoreFromFileBody => 'Choose a Ledgerly backup (.json).';
+  String get restoreConfirmTitle => 'Replace all data?';
+  String get restoreConfirmBody =>
+      'Everything in Ledgerly is replaced with this backup. A safety backup of your current data is made first, so you can go back.';
+  String get restored => 'Data restored';
+  String get restoreInvalid => 'That isn’t a Ledgerly backup file';
+  String get restoreFailed => 'Restore didn’t complete, so your data was put back as it was';
+  String get deleteBackupTitle => 'Delete this backup?';
+  String get deleteBackupBody => 'This can’t be undone.';
+  String get backupDeleted => 'Backup deleted';
+  String get saveCopy => 'Save a copy';
+
   // Seeded categories (order matters — see domain/seeds.dart)
   List<String> get seedCategoryNames => const [
         'Food',

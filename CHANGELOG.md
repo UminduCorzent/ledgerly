@@ -3,6 +3,49 @@
 This file lists every Ledgerly release, newest first. It loosely follows the
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format, and dates are `YYYY-MM-DD`.
 
+## [1.0.0] - 2026-10-05
+
+Fourth milestone (M4). With export, import and backup, the core scope is complete.
+
+### Added
+- **Export** (Settings → This account → Export)
+  - **Formats:**
+    - **CSV**, saved as UTF-8 with a byte-order mark so Excel opens it correctly.
+    - **Excel (.xlsx)**.
+    - A **PDF summary**: income, expense and net, spending by category and income sources, with one section per currency and page numbers.
+  - **Period**: This month, Last month, Last 3 months, This year, All time, or custom dates. "Month" follows the account's month cycle.
+  - **Accounts**: one or several.
+  - Shows a live count of what will be exported. The limit is 10,000 rows, keeping the **newest**.
+  - CSV and Excel include excluded transactions, marked in an Excluded column. The PDF leaves them out.
+  - Both sides of each transfer are exported, with direction and counterpart account columns, so a re-import rebuilds the transfer.
+  - **Save to device** or **Share** on the phone; **Download** in the web preview.
+- **Import** (Settings → This account → Import)
+  - **CSV, Excel (first sheet) or JSON** (a bare list, or `{"transactions": [...]}`).
+  - Column headers can be in any order, and case and spacing don't matter.
+  - **Required columns:** Date, Type and Amount.
+  - **Optional columns:** Account, Category, Description, Currency, Notes, Excluded, Transfer direction, Counterpart account.
+  - **Accepted values:**
+    - Dates: `2026-10-05 13:20`, `2026-10-05`, `05 Oct 2026` and similar formats.
+    - Amounts: negative amounts are treated as positive.
+  - **Review:** the number found, the date span, and the rows that can't be imported with the reason for each. Tick or untick individual rows (the first 200 are shown).
+  - **Accounts:** use the accounts named in the file (missing accounts are created, and each new one is marked **new**), or put everything into one account.
+  - **When rows already exist:** **Skip duplicates** (same account, day, type, category, description and amount, including duplicates inside the file), **Add all**, or **Replace all**. Replace all asks for confirmation first.
+  - **Transfers:** the two legs are paired back into a linked transfer. A lone leg is rebuilt when its other account is known and uses the same currency.
+  - Missing categories are created in each account.
+  - **Result:** "N added · M skipped", any new accounts and categories, the reason for each skipped row, and **Undo**, which reverses the whole import.
+- **Backup & restore** (Settings → Backup & restore)
+  - **Back up now:** a full JSON copy of accounts, categories, transactions and settings, then Save or Share.
+  - **Your PIN and lock settings are never included.** A restore keeps this device's own lock settings.
+  - **Backups on this device:** restore, save a copy, or delete each one.
+    - The newest 5 backups are kept.
+    - Safety backups have their own limit of 3, so they never push your own backups out.
+  - **Restore** (from the list, or from a file):
+    1. Asks for confirmation.
+    2. Saves a **safety backup** of your current data.
+    3. Replaces everything and checks the record counts.
+    4. If the counts don't match, it **rolls back automatically**.
+  - Restored data shows straight away, with no restart needed.
+
 ## [0.3.0] - 2026-10-05
 
 Third milestone (M3): month cycles, App Lock and the rest of Settings.

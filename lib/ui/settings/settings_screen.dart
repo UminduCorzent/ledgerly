@@ -10,6 +10,9 @@ import '../../state/ledger_store.dart';
 import '../../state/lock_store.dart';
 import '../../state/settings_store.dart';
 import '../accounts/accounts_screen.dart';
+import '../backup/backup_screen.dart';
+import '../export/export_screen.dart';
+import '../import/import_screen.dart';
 import '../categories/categories_screen.dart';
 import '../categories/default_categories_sheet.dart';
 import '../lock/pin_screens.dart';
@@ -56,6 +59,14 @@ class SettingsScreen extends StatelessWidget {
         const _SecurityGroup(),
         const SizedBox(height: 10),
         _Group(children: [
+          _Row(
+            icon: Icons.backup_outlined,
+            title: s.settingsBackup,
+            subtitle: s.settingsBackupBody,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const BackupScreen()),
+            ),
+          ),
           _Row(
             icon: Icons.account_balance_wallet_outlined,
             title: s.settingsAccounts,
@@ -172,6 +183,26 @@ class _AccountGroup extends StatelessWidget {
                 subtitle: s.defaultSummary(expenseDefault?.name ?? '—', incomeDefault?.name ?? '—'),
                 badge: badge,
                 onTap: () => showDefaultCategoriesSheet(context),
+              ),
+              Divider(height: 1, indent: 60, color: c.line),
+              _Row(
+                icon: Icons.file_upload_outlined,
+                title: s.settingsExport,
+                subtitle: s.settingsExportBody,
+                badge: badge,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const ExportScreen()),
+                ),
+              ),
+              Divider(height: 1, indent: 60, color: c.line),
+              _Row(
+                icon: Icons.file_download_outlined,
+                title: s.settingsImport,
+                subtitle: s.settingsImportBody,
+                badge: badge,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const ImportScreen()),
+                ),
               ),
             ],
           ),

@@ -6,7 +6,7 @@
 class AppInfo {
   const AppInfo._();
 
-  static const String version = '0.3.0';
+  static const String version = '1.0.0';
   static const String buildNumber =
       String.fromEnvironment('BUILD_NUMBER', defaultValue: 'dev');
   static const String buildSha =

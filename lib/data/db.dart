@@ -10,6 +10,9 @@ class Db {
   static const String txns = 'txns';
   static const String settings = 'settings';
 
+  /// On-device backups (kept in storage rather than files so the web preview works too).
+  static const String backups = 'backups';
+
   static const List<String> recordBoxes = [accounts, categories, txns];
 
   /// Bump when stored data needs reshaping, and add a step to [_migrate].
@@ -21,7 +24,7 @@ class Db {
 
   Future<void> init() async {
     await Hive.initFlutter('ledgerly');
-    for (final name in [...recordBoxes, settings]) {
+    for (final name in [...recordBoxes, settings, backups]) {
       _boxes[name] = await Hive.openBox<dynamic>(name);
     }
     await _migrate();
@@ -77,6 +80,40 @@ class Db {
   }
 
   T? setting<T>(String key) => box(settings).get(key) as T?;
+
+  /// Every setting as a plain map (for backups).
+  Map<String, dynamic> allSettings() => {
+        for (final k in box(settings).keys) k.toString(): box(settings).get(k),
+      };
+
+  /// Replaces all accounts, categories and transactions, and every setting for
+  /// which [keepSetting] is false. Used by restore.
+  Future<void> replaceAll({
+    required List<Map<String, dynamic>> accountsData,
+    required List<Map<String, dynamic>> categoriesData,
+    required List<Map<String, dynamic>> txnsData,
+    required Map<String, dynamic> settingsData,
+    required bool Function(String key) keepSetting,
+  }) async {
+    Future<void> refill(String name, List<Map<String, dynamic>> records) async {
+      final b = box(name);
+      await b.clear();
+      await b.putAll({for (final r in records) r['id'] as String: r});
+    }
+
+    await refill(accounts, accountsData);
+    await refill(categories, categoriesData);
+    await refill(txns, txnsData);
+    final s = box(settings);
+    final drop = [for (final k in s.keys) if (!keepSetting(k.toString())) k];
+    await s.deleteAll(drop);
+    await s.putAll({
+      for (final e in settingsData.entries)
+        if (!keepSetting(e.key)) e.key: e.value,
+    });
+  }
+
+  int count(String boxName) => box(boxName).length;
 
   Future<void> setSetting(String key, Object? value) =>
       value == null ? box(settings).delete(key) : box(settings).put(key, value);

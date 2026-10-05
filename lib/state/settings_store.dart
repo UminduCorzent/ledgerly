@@ -22,6 +22,12 @@ class SettingsStore extends ChangeNotifier {
     };
   }
 
+  /// Re-reads settings (after a restore) and updates the UI.
+  void reload() {
+    load();
+    notifyListeners();
+  }
+
   Future<void> setThemeMode(ThemeMode mode) async {
     if (mode == _themeMode) return;
     _themeMode = mode;

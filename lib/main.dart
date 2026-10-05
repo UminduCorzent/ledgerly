@@ -5,6 +5,7 @@ import 'app.dart';
 import 'core/strings/app_strings.dart';
 import 'core/theme/app_theme.dart';
 import 'data/db.dart';
+import 'state/backup_store.dart';
 import 'state/ledger_store.dart';
 import 'state/lock_store.dart';
 import 'state/settings_store.dart';
@@ -28,6 +29,7 @@ Future<void> _boot() async {
   final ledger = LedgerStore(db)..load();
   final filters = TxnFilterStore(ledger, db);
   final lock = LockStore(db)..load();
+  final backups = BackupStore(db, ledger, settings);
   WidgetsBinding.instance.addObserver(lock);
   runApp(
     MultiProvider(
@@ -36,6 +38,7 @@ Future<void> _boot() async {
         ChangeNotifierProvider<LockStore>.value(value: lock),
         ChangeNotifierProvider<LedgerStore>.value(value: ledger),
         ChangeNotifierProvider<TxnFilterStore>.value(value: filters),
+        ChangeNotifierProvider<BackupStore>.value(value: backups),
       ],
       child: const LedgerlyApp(),
     ),

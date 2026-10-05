@@ -6,7 +6,9 @@ import 'package:uuid/uuid.dart';
 import '../core/strings/app_strings.dart';
 import '../data/change_set.dart';
 import '../data/db.dart';
+import '../core/format/money.dart';
 import '../domain/date_range.dart';
+import '../domain/export_import.dart';
 import '../domain/ledger_math.dart';
 import '../domain/month_cycle.dart';
 import '../domain/seeds.dart';
@@ -44,6 +46,29 @@ class TxnDraft {
   final DateTime date;
   final String? notes;
   final bool excluded;
+}
+
+enum ImportStrategy { addAll, skipDuplicates, replaceAll }
+
+enum ImportSkip { duplicate, unpairedTransfer }
+
+@immutable
+class ImportOutcome {
+  const ImportOutcome({
+    required this.result,
+    required this.added,
+    required this.skipped,
+    required this.newAccounts,
+    required this.newCategories,
+  });
+
+  final WriteResult result;
+
+  /// Transactions created (a transfer counts once).
+  final int added;
+  final List<(ImportRow, ImportSkip)> skipped;
+  final int newAccounts;
+  final int newCategories;
 }
 
 @immutable
@@ -699,6 +724,249 @@ class LedgerStore extends ChangeNotifier {
       }
     }
     return r;
+  }
+
+  // Export / import
+
+  /// Rows for export, newest first, capped at [cap] (the most recent rows are kept).
+  List<ExportRow> exportRows(Set<String> accountIds, DateRange? range, {int cap = 10000}) {
+    final rows = <Txn>[
+      for (final id in accountIds)
+        for (final t in txnsFor(id))
+          if (range == null || range.contains(t.date)) t,
+    ]..sort((a, b) => b.date.compareTo(a.date));
+    return [
+      for (final t in rows.take(cap))
+        ExportRow(
+          date: t.date,
+          type: t.type,
+          account: account(t.accountId)?.name ?? '',
+          category: t.isTransfer ? '' : (category(t.categoryId)?.name ?? ''),
+          description: t.description,
+          amount: t.amount,
+          currency: account(t.accountId)?.currency ?? kDefaultCurrency,
+          notes: t.notes,
+          excluded: !t.isCounted,
+          direction: t.direction,
+          counterpart: t.isTransfer ? account(t.counterAccountId)?.name : null,
+        ),
+    ];
+  }
+
+  /// Imports parsed rows as one write (so it can be undone).
+  /// * [singleAccountId] puts every income/expense row into that account;
+  ///   otherwise rows go to the account named in the file (created if missing),
+  ///   or to the active account when the file has no account column.
+  ///   Transfers always use their own account names.
+  /// * Transfer rows are paired back into linked legs; a lone leg is rebuilt when
+  ///   its other account is known and uses the same currency, else skipped.
+  Future<ImportOutcome> importRows(
+    List<ImportRow> rows, {
+    String? singleAccountId,
+    required ImportStrategy strategy,
+  }) async {
+    final now = DateTime.now();
+    final s = AppStrings.current;
+    final cs = ChangeSet();
+    final skipped = <(ImportRow, ImportSkip)>[];
+    final accByName = {for (final a in _accounts.values) a.name.toLowerCase(): a};
+    final newAccounts = <Account>[];
+    final catsByAccount = <String, Map<String, Category>>{};
+    var newCategories = 0;
+    var order = accounts.isEmpty ? 0 : accounts.last.sortOrder + 1;
+
+    Map<String, Category> catsOf(String accountId) => catsByAccount.putIfAbsent(
+          accountId,
+          () => {for (final c in categoriesFor(accountId)) c.name.toLowerCase(): c},
+        );
+
+    Account? resolveAccount(String? name, String? currency) {
+      final trimmed = name?.trim() ?? '';
+      if (trimmed.isEmpty) return activeAccount;
+      final hit = accByName[trimmed.toLowerCase()];
+      if (hit != null) return hit;
+      final a = Account(
+        id: newId(),
+        name: trimmed,
+        currency: currency != null && kCurrencies.any((c) => c.code == currency) ? currency : kDefaultCurrency,
+        emoji: '💰',
+        color: kPalette[(order + 3) % kPalette.length],
+        type: AccountType.other,
+        sortOrder: order++,
+        createdAt: now,
+      );
+      accByName[trimmed.toLowerCase()] = a;
+      newAccounts.add(a);
+      cs.put(Db.accounts, a.id, a.toMap());
+      final names = s.seedCategoryNames;
+      final cats = catsByAccount.putIfAbsent(a.id, () => {});
+      for (var i = 0; i < kSeedCategories.length; i++) {
+        final c = Category(
+          id: newId(),
+          accountId: a.id,
+          name: names[i],
+          emoji: kSeedCategories[i].$1,
+          color: kSeedCategories[i].$2,
+          sortOrder: i,
+          createdAt: now,
+        );
+        cats[c.name.toLowerCase()] = c;
+        cs.put(Db.categories, c.id, c.toMap());
+      }
+      return a;
+    }
+
+    Category resolveCategory(String accountId, String name) {
+      final cats = catsOf(accountId);
+      final hit = cats[name.toLowerCase()];
+      if (hit != null) return hit;
+      final maxOrder = cats.values.fold<int>(-1, (m, c) => c.sortOrder > m ? c.sortOrder : m);
+      final c = Category(
+        id: newId(),
+        accountId: accountId,
+        name: name,
+        emoji: '📌',
+        color: 0xFF94A3B8,
+        sortOrder: maxOrder + 1,
+        createdAt: now,
+      );
+      cats[name.toLowerCase()] = c;
+      cs.put(Db.categories, c.id, c.toMap());
+      newCategories++;
+      return c;
+    }
+
+    // Resolve target accounts first (Replace all needs to know them).
+    final plain = rows.where((r) => r.type != TxnType.transfer).toList();
+    final transfers = rows.where((r) => r.type == TxnType.transfer).toList();
+    final single = singleAccountId == null ? null : _accounts[singleAccountId];
+    final plainTargets = <ImportRow, Account?>{
+      for (final r in plain) r: single ?? resolveAccount(r.account, r.currency),
+    };
+    final (pairs, lone) = pairTransfers(transfers);
+    final transferPlans = <(ImportRow, Account, Account, double, double)>[];
+    for (final (out, inn) in pairs) {
+      final from = resolveAccount(out.account, out.currency);
+      final to = resolveAccount(inn!.account, inn.currency);
+      if (from == null || to == null || from.id == to.id) {
+        skipped.add((out, ImportSkip.unpairedTransfer));
+        continue;
+      }
+      transferPlans.add((out, from, to, out.amount, inn.amount));
+    }
+    for (final r in lone) {
+      final own = resolveAccount(r.account, r.currency);
+      final other = r.counterpart == null ? null : resolveAccount(r.counterpart, r.currency);
+      if (own == null || other == null || own.id == other.id || own.currency != other.currency || r.direction == null) {
+        skipped.add((r, ImportSkip.unpairedTransfer));
+        continue;
+      }
+      final outgoing = r.direction == TransferDirection.outgoing;
+      transferPlans.add((r, outgoing ? own : other, outgoing ? other : own, r.amount, r.amount));
+    }
+
+    final targetIds = <String>{
+      for (final a in plainTargets.values)
+        if (a != null) a.id,
+      for (final p in transferPlans) ...[p.$2.id, p.$3.id],
+    };
+
+    // Existing rows that count for duplicate checks (none after Replace all).
+    final existingKeys = <String>{};
+    if (strategy == ImportStrategy.replaceAll) {
+      for (final id in targetIds) {
+        for (final t in txnsFor(id)) {
+          cs.delete(Db.txns, t.id);
+          final other = counterpart(t);
+          if (other != null) cs.delete(Db.txns, other.id);
+        }
+      }
+    } else if (strategy == ImportStrategy.skipDuplicates) {
+      for (final id in targetIds) {
+        for (final t in txnsFor(id)) {
+          existingKeys.add(duplicateKey(
+            accountKey: t.accountId,
+            date: t.date,
+            type: t.type,
+            category: t.isTransfer ? '' : (category(t.categoryId)?.name ?? ''),
+            description: t.description,
+            amount: t.amount,
+          ));
+        }
+      }
+    }
+    final checkDuplicates = strategy == ImportStrategy.skipDuplicates;
+
+    var added = 0;
+    for (final r in plain) {
+      final acc = plainTargets[r];
+      if (acc == null) continue;
+      final key = duplicateKey(
+        accountKey: acc.id,
+        date: r.date,
+        type: r.type,
+        category: r.category,
+        description: r.description,
+        amount: r.amount,
+      );
+      if (checkDuplicates && !existingKeys.add(key)) {
+        skipped.add((r, ImportSkip.duplicate));
+        continue;
+      }
+      final t = Txn(
+        id: newId(),
+        accountId: acc.id,
+        type: r.type,
+        amount: r.amount,
+        categoryId: resolveCategory(acc.id, r.category).id,
+        description: r.description,
+        date: r.date,
+        notes: r.notes,
+        excluded: r.excluded,
+        createdAt: now,
+      );
+      cs.put(Db.txns, t.id, t.toMap());
+      added++;
+    }
+    for (final (row, from, to, sent, received) in transferPlans) {
+      final key = duplicateKey(
+        accountKey: from.id,
+        date: row.date,
+        type: TxnType.transfer,
+        category: '',
+        description: row.description,
+        amount: sent,
+      );
+      if (checkDuplicates && !existingKeys.add(key)) {
+        skipped.add((row, ImportSkip.duplicate));
+        continue;
+      }
+      for (final leg in buildTransferLegs(
+        transferId: newId(),
+        outId: newId(),
+        inId: newId(),
+        fromAccountId: from.id,
+        toAccountId: to.id,
+        sent: sent,
+        received: received,
+        date: row.date,
+        description: row.description,
+        notes: row.notes,
+        createdAt: now,
+      )) {
+        cs.put(Db.txns, leg.id, leg.toMap());
+      }
+      added++;
+    }
+
+    final result = await _commit(cs);
+    return ImportOutcome(
+      result: result,
+      added: result.success ? added : 0,
+      skipped: skipped,
+      newAccounts: result.success ? newAccounts.length : 0,
+      newCategories: result.success ? newCategories : 0,
+    );
   }
 
   Future<void> setDefaultCategory(String accountId, TxnType type, String categoryId) async {
