@@ -12,6 +12,16 @@ Read this before making any change. Before calling a change done, run the Defini
   - the web build and the APK build, both deployed to GitHub Pages
 - **Every change must compile and pass tests in CI.**
 
+### Known name clash: `Category`
+`package:flutter/foundation.dart` exports a `Category` annotation that clashes with our model.
+
+Any file that imports both must hide Flutter's version:
+```dart
+import 'package:flutter/foundation.dart' hide Category;
+```
+
+`material.dart` and `widgets.dart` don't re-export it, so files importing only those are fine.
+
 ### No code generation
 - No `build_runner`, Hive adapters, `freezed` or `gen-l10n`.
 - Models use hand-written `toMap` / `fromMap` and are stored as plain maps in Hive boxes.
