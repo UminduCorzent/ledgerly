@@ -2,10 +2,12 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/platform/file_output.dart';
 import '../../core/strings/app_strings.dart';
 import '../../core/theme/tokens.dart';
+import '../../state/lock_store.dart';
 import '../widgets/common.dart';
 
 /// "Your file is ready" → Save to device (Download on the web) or Share.
@@ -17,6 +19,7 @@ Future<void> showFileReadySheet(
 }) {
   return showModalBottomSheet<void>(
     context: context,
+    isScrollControlled: true,
     useSafeArea: true,
     builder: (ctx) {
       final s = AppStrings.of(ctx);
@@ -26,9 +29,11 @@ Future<void> showFileReadySheet(
       Future<void> run(Future<bool> Function() action, {bool saved = false}) async {
         final messenger = ScaffoldMessenger.of(ctx);
         final nav = Navigator.of(ctx);
+        final lock = ctx.read<LockStore>();
         bool ok;
         try {
-          ok = await action();
+          // Save dialogs and the share sheet leave the app; don't lock on return.
+          ok = await lock.runExternal(action);
         } catch (_) {
           ok = false;
           messenger.showSnackBar(SnackBar(content: Text(s.fileFailed)));
@@ -41,7 +46,7 @@ Future<void> showFileReadySheet(
 
       return SafeArea(
         top: false,
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,

@@ -423,29 +423,42 @@ class _SecurityGroupState extends State<_SecurityGroup> {
     final c = context.colors;
     final picked = await showModalBottomSheet<int>(
       context: context,
+      // Scroll-controlled + capped height: the fixed list overflowed the default
+      // 9/16-screen sheet on smaller phones.
+      isScrollControlled: true,
       useSafeArea: true,
       builder: (ctx) => SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
-              child: Text(s.autoLock, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text(s.autoLockBody, style: TextStyle(color: c.muted)),
-            ),
-            for (final sec in LockStore.timeoutOptions)
-              ListTile(
-                title: Text(s.autoLockLabel(sec)),
-                trailing: sec == lock.timeoutSeconds ? Icon(Icons.check_rounded, color: c.primary) : null,
-                onTap: () => Navigator.pop(ctx, sec),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * 0.8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+                child: Text(s.autoLock, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
               ),
-            const SizedBox(height: 8),
-          ],
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Text(s.autoLockBody, style: TextStyle(color: c.muted)),
+              ),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.only(bottom: 8),
+                  children: [
+                    for (final sec in LockStore.timeoutOptions)
+                      ListTile(
+                        title: Text(s.autoLockLabel(sec)),
+                        trailing: sec == lock.timeoutSeconds ? Icon(Icons.check_rounded, color: c.primary) : null,
+                        onTap: () => Navigator.pop(ctx, sec),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -6,11 +6,14 @@ import '../../core/strings/app_strings.dart';
 import '../../state/lock_store.dart';
 import 'pin_pad.dart';
 
-/// Root navigator, so locking can close any open sheet or page underneath.
+/// Root navigator, used to block the Back button while the app is locked.
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 /// Sits above the whole app (MaterialApp.builder). While locked it hides the
 /// content (kept alive, not rebuilt) and shows the lock screen on top.
+///
+/// Pages and sheets are deliberately left open: the lock screen covers all of
+/// them, and after unlocking you return exactly where you were (e.g. mid-import).
 class LockGate extends StatefulWidget {
   const LockGate({super.key, required this.child});
 
@@ -23,15 +26,36 @@ class LockGate extends StatefulWidget {
 class _LockGateState extends State<LockGate> {
   bool _wasLocked = false;
 
+  /// Invisible top route while locked, so Back can't pop hidden pages.
+  Route<void>? _backBlocker;
+
+  void _syncBackBlocker() {
+    // After the frame: on a cold start the Navigator doesn't exist yet.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final nav = appNavigatorKey.currentState;
+      if (nav == null || !mounted) return;
+      final stillLocked = context.read<LockStore>().locked;
+      if (stillLocked && _backBlocker == null) {
+        final route = PageRouteBuilder<void>(
+          opaque: false,
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+          pageBuilder: (_, _, _) => const PopScope(canPop: false, child: SizedBox.shrink()),
+        );
+        _backBlocker = route;
+        nav.push(route);
+      } else if (!stillLocked && _backBlocker != null) {
+        final route = _backBlocker!;
+        _backBlocker = null;
+        if (route.isActive) nav.removeRoute(route);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final locked = context.select<LockStore, bool>((l) => l.locked);
-    if (locked && !_wasLocked) {
-      // Close sheets/pages under the lock so nothing sensitive stays open.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        appNavigatorKey.currentState?.popUntil((r) => r.isFirst);
-      });
-    }
+    if (locked != _wasLocked) _syncBackBlocker();
     _wasLocked = locked;
     return Stack(
       fit: StackFit.expand,

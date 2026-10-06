@@ -198,11 +198,45 @@ class LockStore extends ChangeNotifier with WidgetsBindingObserver {
     await _save({_kBio: on});
   }
 
+  // --------------------------------------------- actions that leave the app
+
+  int _externalDepth = 0;
+  DateTime? _externalStarted;
+
+  /// An outside action that ran longer than this (e.g. the user wandered off
+  /// from a file picker) still locks on return.
+  static const Duration externalGrace = Duration(minutes: 5);
+
+  /// Runs [action], which opens system UI the user asked for (file picker,
+  /// save dialog, share sheet). Leaving the app for it doesn't count as
+  /// backgrounding, so returning doesn't lock and the flow carries on.
+  Future<T> runExternal<T>(Future<T> Function() action) async {
+    _externalDepth++;
+    _externalStarted ??= DateTime.now();
+    try {
+      return await action();
+    } finally {
+      _externalDepth--;
+      if (_externalDepth == 0) {
+        final started = _externalStarted;
+        _externalStarted = null;
+        _backgroundAt = null; // a late "resumed" event must not lock
+        if (_enabled &&
+            !_locked &&
+            started != null &&
+            DateTime.now().difference(started) > externalGrace) {
+          _locked = true;
+          notifyListeners();
+        }
+      }
+    }
+  }
+
   // ------------------------------------------------------------- lifecycle
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!_enabled || _authInProgress) return;
+    if (!_enabled || _authInProgress || _externalDepth > 0) return;
     switch (state) {
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:

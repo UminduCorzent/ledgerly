@@ -91,6 +91,9 @@ The web build is the preview the user tests with, so:
 
 ## 5. UI safety
 
+- **System UI and App Lock:** any action that opens system UI the user asked for (a file picker, a save dialog, the share sheet, a permission prompt) must be wrapped in `context.read<LockStore>().runExternal(...)`. Otherwise App Lock treats the trip out of the app as backgrounding and locks on return.
+- **Bottom sheets:** always use `isScrollControlled: true`, with content that scrolls (`SingleChildScrollView`, or `Flexible` + `ListView` under a max-height constraint). The default sheet height is capped at 9/16 of the screen, so a fixed `Column` can overflow on small phones.
+
 - **Overflow:** any `Text` showing user-entered content gets `maxLines` and `overflow: TextOverflow.ellipsis`.
 - **After an `await`:** check `context.mounted` (or `mounted`) before using a `BuildContext`.
 - **Destructive actions:** ask for confirmation, use a red button, then offer Undo.

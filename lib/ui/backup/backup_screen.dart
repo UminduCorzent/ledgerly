@@ -10,6 +10,7 @@ import '../../core/format/dates.dart';
 import '../../core/strings/app_strings.dart';
 import '../../core/theme/tokens.dart';
 import '../../state/backup_store.dart';
+import '../../state/lock_store.dart';
 import '../../state/txn_filter_store.dart';
 import '../export/file_ready_sheet.dart';
 import '../widgets/common.dart';
@@ -65,10 +66,13 @@ class _BackupScreenState extends State<BackupScreen> {
 
   Future<void> _restoreFromFile() async {
     final s = AppStrings.of(context);
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: const ['json'],
-      withData: true,
+    // The picker leaves the app; don't let App Lock treat that as backgrounding.
+    final result = await context.read<LockStore>().runExternal(
+      () => FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['json'],
+        withData: true,
+      ),
     );
     if (!mounted || result == null || result.files.isEmpty) return;
     final bytes = result.files.single.bytes;

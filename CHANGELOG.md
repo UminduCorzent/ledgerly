@@ -3,6 +3,17 @@
 This file lists every Ledgerly release, newest first. It loosely follows the
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format, and dates are `YYYY-MM-DD`.
 
+## [1.0.1] - 2026-10-06
+
+### Fixed
+- **App Lock no longer interrupts actions you start**: the file picker (Import, Restore from a file), Save to device and Share.
+  - Returning from those no longer shows the lock screen, and the import or restore carries on.
+  - As a safety net, if you're away in the picker for more than 5 minutes, the app still locks when you return.
+- **Locking keeps your place.** Ledgerly no longer closes the page you were on (e.g. Backup & restore) when it locks. After unlocking you're exactly where you left off, with any open sheet still there.
+  - The Back button does nothing while the lock screen is showing.
+- **The Auto-lock sheet no longer overflows on smaller screens** ("BOTTOM OVERFLOWED BY 37 PIXELS"). The options scroll if they don't fit.
+  - Every other bottom sheet now has the same protection.
+
 ## [1.0.0] - 2026-10-05
 
 Fourth milestone (M4). With export, import and backup, the core scope is complete.

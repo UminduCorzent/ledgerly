@@ -10,6 +10,7 @@ import '../../core/theme/tokens.dart';
 import '../../domain/export_import.dart';
 import '../../models/txn.dart';
 import '../../state/ledger_store.dart';
+import '../../state/lock_store.dart';
 import '../../state/txn_filter_store.dart';
 import '../widgets/common.dart';
 
@@ -34,10 +35,13 @@ class _ImportScreenState extends State<ImportScreen> {
   bool _importing = false;
 
   Future<void> _pick() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: const ['csv', 'xlsx', 'json'],
-      withData: true,
+    // The picker leaves the app; don't let App Lock treat that as backgrounding.
+    final result = await context.read<LockStore>().runExternal(
+      () => FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['csv', 'xlsx', 'json'],
+        withData: true,
+      ),
     );
     if (!mounted || result == null || result.files.isEmpty) return;
     final file = result.files.single;
