@@ -33,8 +33,8 @@ jobs:
       - name: Flutter version
         run: flutter --version
 
-      # Platform folders are not committed (except our customised files);
-      # `flutter create` fills in everything missing and never overwrites existing files.
+      # android/ is committed; this generates web/ and fills in anything missing.
+      # `flutter create` never overwrites existing files.
       - name: Generate platform folders
         run: flutter create --org com.ledgerly --project-name ledgerly --platforms=android,web .
 
