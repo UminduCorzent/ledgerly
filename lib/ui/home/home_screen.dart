@@ -402,21 +402,52 @@ class _AccountsStrip extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (context, i) {
           if (i == accounts.length) {
+            // Avatar and label share a row so up to three currencies fit the
+            // strip's fixed height (two stacked lines overflowed by 2 px).
+            final shown = totals.length <= 3 ? totals.entries.toList() : totals.entries.take(2).toList();
+            const line = TextStyle(fontWeight: FontWeight.w700, fontSize: 13, height: 1.2);
             return tile(
               muted: true,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  EmojiAvatar(emoji: 'Σ', color: c.muted, size: 28),
+                  Row(
+                    children: [
+                      EmojiAvatar(emoji: 'Σ', color: c.muted, size: 28),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          s.totalLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: c.muted, fontSize: 12.5),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 6),
-                  Text(s.totalLabel, style: TextStyle(color: c.muted, fontSize: 12.5)),
-                  for (final e in totals.entries.take(2))
-                    Text(
-                      formatMoney(e.value, e.key, whole: true),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  Flexible(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (final e in shown)
+                          Text(
+                            formatMoney(e.value, e.key, whole: true),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: line,
+                          ),
+                        if (totals.length > shown.length)
+                          Text(
+                            s.moreCurrencies(totals.length - shown.length),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: c.muted, fontSize: 12, height: 1.2),
+                          ),
+                      ],
                     ),
+                  ),
                 ],
               ),
             );

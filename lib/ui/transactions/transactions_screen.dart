@@ -544,7 +544,7 @@ class _ActiveChips extends StatelessWidget {
       }));
     }
     for (final name in filter.categoryNames) {
-      final display = ledger.categoriesFor(account?.id ?? '')
+      final display = ledger.categories
           .where((c) => c.name.toLowerCase() == name)
           .map((c) => '${c.emoji} ${c.name}')
           .firstOrNullSafe ?? name;

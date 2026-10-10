@@ -75,6 +75,7 @@ class AppStrings {
   String get statExpense => 'Expense';
   String get accountsTitle => 'Accounts';
   String get totalLabel => 'Total';
+  String moreCurrencies(int n) => '+$n more';
   String get breakdownTitle => 'Breakdown';
   String get breakdownSpending => 'Spending';
   String get breakdownIncome => 'Income';
@@ -175,7 +176,7 @@ class AppStrings {
       };
   String get deleteAccountTitle => 'Delete account?';
   String deleteAccountBody(String name) =>
-      'Delete "$name" and its categories. You can undo this right after.';
+      'Delete "$name"? Categories stay, because all accounts share them. You can undo this right after.';
   String deleteAccountHasTxns(int n) =>
       'It has $n transaction${n == 1 ? '' : 's'}. What should happen to them?';
   String get reassignTxns => 'Move them to another account';

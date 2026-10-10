@@ -3,6 +3,20 @@
 This file lists every Ledgerly release, newest first. It loosely follows the
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format, and dates are `YYYY-MM-DD`.
 
+## [1.2.0] - 2026-10-10
+
+### Changed
+- **Categories are now shared by all your accounts.** There's one list, managed from **Settings → Categories** in the App group.
+  - **On update:** categories with the same name in different accounts merge into one, e.g. five "Food" categories become one. Its icon and colour come from the first account in your account order, and every transaction keeps its category.
+  - **Defaults stay per account.** Each account's Default categories and payday categories still apply, now pointing at the merged category.
+  - New accounts no longer get their own copy of the starter categories. Deleting an account keeps the categories.
+  - Restoring a backup from an earlier version merges its categories the same way.
+- **About is now the last item in Settings.**
+
+### Fixed
+- **The Total tile in Home's Accounts strip** no longer shows "BOTTOM OVERFLOWED BY 2.0 PIXELS" with two currencies.
+  - It now fits up to three currencies, and shows "+N more" beyond that.
+
 ## [1.1.0] - 2026-10-10
 
 ### Changed

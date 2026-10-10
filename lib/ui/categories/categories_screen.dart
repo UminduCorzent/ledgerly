@@ -11,7 +11,8 @@ import '../widgets/emoji_avatar.dart';
 import 'category_editor_sheet.dart';
 import 'delete_categories_flow.dart';
 
-/// The active account's categories: search, reorder, multi-select delete.
+/// The app-wide categories (shared by every account): search, reorder,
+/// multi-select delete.
 class CategoriesScreen extends StatefulWidget {
   const CategoriesScreen({super.key});
 
@@ -32,10 +33,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     final s = AppStrings.of(context);
     final c = context.colors;
     final ledger = context.watch<LedgerStore>();
-    final account = ledger.activeAccount;
-    if (account == null) return const SizedBox.shrink();
-    final all = ledger.categoriesFor(account.id);
-    final usage = ledger.categoryUsage(account.id);
+    final all = ledger.categories;
+    final usage = ledger.categoryUsage();
     _selected.removeWhere((id) => ledger.category(id) == null);
 
     final PreferredSizeWidget bar;
@@ -74,7 +73,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             tooltip: s.delete,
             icon: Icon(Icons.delete_outline_rounded, color: c.expense),
             onPressed: () async {
-              await runDeleteCategoriesFlow(context, account.id, Set.of(_selected));
+              await runDeleteCategoriesFlow(context, Set.of(_selected));
               if (mounted) setState(_selected.clear);
             },
           ),
@@ -101,7 +100,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
           IconButton(
             tooltip: s.addCategory,
             icon: const Icon(Icons.add_rounded),
-            onPressed: () => showCategoryEditor(context, accountId: account.id),
+            onPressed: () => showCategoryEditor(context),
           ),
         ],
       );
@@ -183,7 +182,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                             HapticFeedback.selectionClick();
                             setState(() => selected ? _selected.remove(cat.id) : _selected.add(cat.id));
                           } else {
-                            showCategoryEditor(context, accountId: account.id, editing: cat);
+                            showCategoryEditor(context, editing: cat);
                           }
                         },
                         onLongPress: _selecting

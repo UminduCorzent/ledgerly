@@ -169,7 +169,7 @@ class _MonthCycleScreenState extends State<MonthCycleScreen> {
   ) {
     final s = AppStrings.of(context);
     final c = context.colors;
-    final cats = ledger.categoriesFor(accountId);
+    final cats = ledger.categories;
     final currency = ledger.account(accountId)?.currency ?? kDefaultCurrency;
     final starts = ledger.recentCycleStarts(accountId);
 

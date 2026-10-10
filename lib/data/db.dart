@@ -1,5 +1,6 @@
 import 'package:hive_ce_flutter/hive_flutter.dart';
 
+import '../domain/category_merge.dart';
 import 'change_set.dart';
 
 /// Local storage. Records are plain maps in Hive boxes (no code generation),
@@ -16,7 +17,7 @@ class Db {
   static const List<String> recordBoxes = [accounts, categories, txns];
 
   /// Bump when stored data needs reshaping, and add a step to [_migrate].
-  static const int schemaVersion = 1;
+  static const int schemaVersion = 2;
 
   final Map<String, Box<dynamic>> _boxes = {};
 
@@ -33,9 +34,27 @@ class Db {
   Future<void> _migrate() async {
     final s = box(settings);
     final from = (s.get('schemaVersion') as num?)?.toInt() ?? 0;
-    if (from == schemaVersion) return;
+    if (from >= schemaVersion) return;
     // v0 → v1: first install, nothing to reshape.
+    // v1 → v2: categories become app-wide (same-named ones are merged). The
+    // merge is idempotent, so a crash before the version bump just re-runs it.
+    if (from < 2) await _mergeCategories();
     await s.put('schemaVersion', schemaVersion);
+  }
+
+  Future<void> _mergeCategories() async {
+    final s = box(settings);
+    final r = mergeCategoriesAcrossAccounts(
+      accounts: all(accounts).toList(),
+      categories: all(categories).toList(),
+      txns: all(txns).toList(),
+      settings: {for (final k in s.keys) k.toString(): s.get(k)},
+    );
+    if (!r.changed) return;
+    await box(txns).putAll(r.changedTxns);
+    await s.putAll(r.changedSettings);
+    await box(categories).putAll({for (final c in r.categories) c['id'] as String: c});
+    await box(categories).deleteAll(r.removedIds);
   }
 
   static Map<String, dynamic> _cast(dynamic v) =>

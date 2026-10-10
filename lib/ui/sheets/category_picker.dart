@@ -10,21 +10,19 @@ import '../widgets/emoji_avatar.dart';
 /// Full category grid with search; resolves to the picked category id.
 Future<String?> showCategoryPicker(
   BuildContext context, {
-  required String accountId,
   String? selectedId,
 }) {
   return showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (_) => _CategoryPicker(accountId: accountId, selectedId: selectedId),
+    builder: (_) => _CategoryPicker(selectedId: selectedId),
   );
 }
 
 class _CategoryPicker extends StatefulWidget {
-  const _CategoryPicker({required this.accountId, this.selectedId});
+  const _CategoryPicker({this.selectedId});
 
-  final String accountId;
   final String? selectedId;
 
   @override
@@ -38,7 +36,7 @@ class _CategoryPickerState extends State<_CategoryPicker> {
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     final media = MediaQuery.of(context);
-    final all = context.read<LedgerStore>().categoriesFor(widget.accountId);
+    final all = context.read<LedgerStore>().categories;
     final q = _q.trim().toLowerCase();
     final cats = q.isEmpty ? all : all.where((c) => c.name.toLowerCase().contains(q)).toList();
 

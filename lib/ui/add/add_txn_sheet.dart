@@ -57,6 +57,10 @@ class _AddTxnSheetState extends State<AddTxnSheet> with SingleTickerProviderStat
   final FocusNode _descFocus = FocusNode();
   final FocusNode _notesFocus = FocusNode();
   bool _descEdited = false;
+
+  /// True once the user picked a category (or is editing a row that has one);
+  /// until then, switching account follows that account's default.
+  bool _categoryChosen = false;
   bool _typing = false;
   late DateTime _date;
   bool _excluded = false;
@@ -98,6 +102,7 @@ class _AddTxnSheetState extends State<AddTxnSheet> with SingleTickerProviderStat
       _toId = _firstOther(e.accountId);
       _amount = amountToInput(e.amount);
       _categoryId = e.categoryId;
+      _categoryChosen = e.categoryId != null;
       _desc.text = e.description;
       _descEdited = true;
       _excluded = e.excluded;
@@ -152,7 +157,7 @@ class _AddTxnSheetState extends State<AddTxnSheet> with SingleTickerProviderStat
         if (!_descEdited) _desc.text = '';
       } else {
         final cat = _store.category(_categoryId);
-        if (!_descEdited || cat == null || cat.accountId != _accountId) {
+        if (!_descEdited || cat == null) {
           _categoryId = _store.defaultCategoryId(_accountId, t);
         }
         if (!_descEdited) _desc.text = _store.category(_categoryId)?.name ?? '';
@@ -193,7 +198,7 @@ class _AddTxnSheetState extends State<AddTxnSheet> with SingleTickerProviderStat
       _accountId = id;
       if (_toId == id) _toId = _firstOther(id);
       final cat = _store.category(_categoryId);
-      if (cat == null || cat.accountId != id) {
+      if (cat == null || !_categoryChosen) {
         _categoryId = _store.defaultCategoryId(id, _isTransfer ? TxnType.expense : _type);
         if (!_descEdited && !_isTransfer) _desc.text = _store.category(_categoryId)?.name ?? '';
       }
@@ -230,12 +235,13 @@ class _AddTxnSheetState extends State<AddTxnSheet> with SingleTickerProviderStat
     HapticFeedback.selectionClick();
     setState(() {
       _categoryId = id;
+      _categoryChosen = true;
       if (!_descEdited) _desc.text = _store.category(id)?.name ?? '';
     });
   }
 
   Future<void> _allCategories() async {
-    final picked = await showCategoryPicker(context, accountId: _accountId, selectedId: _categoryId);
+    final picked = await showCategoryPicker(context, selectedId: _categoryId);
     if (!mounted || picked == null) return;
     _selectCategory(picked);
   }
@@ -559,7 +565,7 @@ class _AddTxnSheetState extends State<AddTxnSheet> with SingleTickerProviderStat
   }
 
   Widget _buildCategories(AppStrings s, AppColors c) {
-    final cats = _store.categoriesFor(_accountId);
+    final cats = _store.categories;
     // Two rows that scroll sideways; the last tile opens the full grid.
     return SizedBox(
       height: 168,

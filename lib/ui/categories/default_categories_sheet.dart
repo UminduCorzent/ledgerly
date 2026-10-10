@@ -38,7 +38,7 @@ class _DefaultCategoriesSheet extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () async {
-            final id = await showCategoryPicker(context, accountId: account.id, selectedId: cat?.id);
+            final id = await showCategoryPicker(context, selectedId: cat?.id);
             if (id == null) return;
             HapticFeedback.selectionClick();
             await ledger.setDefaultCategory(account.id, type, id);

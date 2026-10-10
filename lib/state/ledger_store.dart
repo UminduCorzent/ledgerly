@@ -178,8 +178,9 @@ class LedgerStore extends ChangeNotifier {
   Category? category(String? id) => id == null ? null : _categories[id];
   Txn? txn(String id) => _txns[id];
 
-  List<Category> categoriesFor(String accountId) => _cached('cats:$accountId', () {
-        final list = _categories.values.where((c) => c.accountId == accountId).toList()
+  /// Every category, in the user's order. Categories are shared by all accounts.
+  List<Category> get categories => _cached('cats', () {
+        final list = _categories.values.toList()
           ..sort((a, b) {
             final c = a.sortOrder.compareTo(b.sortOrder);
             return c != 0 ? c : a.name.toLowerCase().compareTo(b.name.toLowerCase());
@@ -302,27 +303,28 @@ class LedgerStore extends ChangeNotifier {
   String categoryNameOf(Txn t, String transferLabel) =>
       t.isTransfer ? transferLabel : (category(t.categoryId)?.name ?? '');
 
-  /// Transaction count per category id for one account (excluded rows included).
-  Map<String, int> categoryUsage(String accountId) => _cached('catUsage:$accountId', () {
+  /// Transaction count per category id across all accounts (excluded rows included).
+  Map<String, int> categoryUsage() => _cached('catUsage', () {
         final map = <String, int>{};
-        for (final t in txnsFor(accountId)) {
+        for (final t in _txns.values) {
           final id = t.categoryId;
           if (id != null) map[id] = (map[id] ?? 0) + 1;
         }
         return map;
       });
 
-  bool isCategoryNameTaken(String accountId, String name, {String? exceptId}) {
+  bool isCategoryNameTaken(String name, {String? exceptId}) {
     final lower = name.trim().toLowerCase();
     return _categories.values.any(
-      (c) => c.accountId == accountId && c.id != exceptId && c.name.toLowerCase() == lower,
+      (c) => c.id != exceptId && c.name.toLowerCase() == lower,
     );
   }
 
-  /// The user's saved default for [type], if it still exists.
+  /// The user's saved default for [type] in [accountId], if it still exists.
+  /// Defaults stay per account, chosen from the shared category list.
   String? savedDefaultCategoryId(String accountId, TxnType type) {
     final saved = _db.setting<String>(_defaultKey(accountId, type));
-    return saved != null && _categories[saved]?.accountId == accountId ? saved : null;
+    return saved != null && _categories.containsKey(saved) ? saved : null;
   }
 
   static String _defaultKey(String accountId, TxnType type) => 'defaultCat_${type.name}_$accountId';
@@ -395,7 +397,7 @@ class LedgerStore extends ChangeNotifier {
   String? defaultCategoryId(String accountId, TxnType type) {
     final saved = savedDefaultCategoryId(accountId, type);
     if (saved != null) return saved;
-    final cats = categoriesFor(accountId);
+    final cats = categories;
     if (cats.isEmpty) return null;
     final seedIndex = type == TxnType.income ? kSeedIncomeDefault : kSeedExpenseDefault;
     final name = AppStrings.current.seedCategoryNames[seedIndex].toLowerCase();
@@ -483,11 +485,11 @@ class LedgerStore extends ChangeNotifier {
       createdAt: now,
     );
     final cs = ChangeSet()..put(Db.accounts, id, account.toMap());
+    // Categories are shared, so only the very first account brings the starter set.
     final names = AppStrings.current.seedCategoryNames;
-    for (var i = 0; i < kSeedCategories.length; i++) {
+    for (var i = 0; _categories.isEmpty && i < kSeedCategories.length; i++) {
       final c = Category(
         id: newId(),
-        accountId: id,
         name: names[i],
         emoji: kSeedCategories[i].$1,
         color: kSeedCategories[i].$2,
@@ -546,9 +548,6 @@ class LedgerStore extends ChangeNotifier {
     }
     for (final c in plan.putCategories) {
       cs.put(Db.categories, c.id, c.toMap());
-    }
-    for (final cid in plan.deleteCategoryIds) {
-      cs.delete(Db.categories, cid);
     }
     final wasActive = activeAccount?.id == id;
     final r = await _commit(cs);
@@ -650,16 +649,13 @@ class LedgerStore extends ChangeNotifier {
   // Categories
 
   Future<WriteResult> createCategory({
-    required String accountId,
     required String name,
     required String emoji,
     required int color,
   }) {
-    final existing = categoriesFor(accountId);
-    final maxOrder = existing.fold<int>(-1, (m, c) => c.sortOrder > m ? c.sortOrder : m);
+    final maxOrder = categories.fold<int>(-1, (m, c) => c.sortOrder > m ? c.sortOrder : m);
     final c = Category(
       id: newId(),
-      accountId: accountId,
       name: name.trim(),
       emoji: emoji,
       color: color,
@@ -687,12 +683,8 @@ class LedgerStore extends ChangeNotifier {
   Future<WriteResult> deleteCategories(Set<String> ids, {String? reassignToId}) async {
     final now = DateTime.now();
     final cs = ChangeSet();
-    final accountIds = <String>{};
     for (final id in ids) {
-      final c = _categories[id];
-      if (c == null) continue;
-      accountIds.add(c.accountId);
-      cs.delete(Db.categories, id);
+      if (_categories.containsKey(id)) cs.delete(Db.categories, id);
     }
     for (final t in _txns.values) {
       if (t.categoryId == null || !ids.contains(t.categoryId)) continue;
@@ -704,7 +696,8 @@ class LedgerStore extends ChangeNotifier {
     }
     final r = await _commit(cs);
     if (r.success) {
-      for (final acc in accountIds) {
+      // Any account may use a shared category as its default.
+      for (final acc in _accounts.keys) {
         for (final type in [TxnType.expense, TxnType.income]) {
           final key = _defaultKey(acc, type);
           if (ids.contains(_db.setting<String>(key))) {
@@ -760,19 +753,14 @@ class LedgerStore extends ChangeNotifier {
     required ImportStrategy strategy,
   }) async {
     final now = DateTime.now();
-    final s = AppStrings.current;
     final cs = ChangeSet();
     final skipped = <(ImportRow, ImportSkip)>[];
     final accByName = {for (final a in _accounts.values) a.name.toLowerCase(): a};
     final newAccounts = <Account>[];
-    final catsByAccount = <String, Map<String, Category>>{};
+    // Categories are shared by every account: one name → category map.
+    final cats = <String, Category>{for (final c in categories) c.name.toLowerCase(): c};
     var newCategories = 0;
     var order = accounts.isEmpty ? 0 : accounts.last.sortOrder + 1;
-
-    Map<String, Category> catsOf(String accountId) => catsByAccount.putIfAbsent(
-          accountId,
-          () => {for (final c in categoriesFor(accountId)) c.name.toLowerCase(): c},
-        );
 
     Account? resolveAccount(String? name, String? currency) {
       final trimmed = name?.trim() ?? '';
@@ -792,32 +780,15 @@ class LedgerStore extends ChangeNotifier {
       accByName[trimmed.toLowerCase()] = a;
       newAccounts.add(a);
       cs.put(Db.accounts, a.id, a.toMap());
-      final names = s.seedCategoryNames;
-      final cats = catsByAccount.putIfAbsent(a.id, () => {});
-      for (var i = 0; i < kSeedCategories.length; i++) {
-        final c = Category(
-          id: newId(),
-          accountId: a.id,
-          name: names[i],
-          emoji: kSeedCategories[i].$1,
-          color: kSeedCategories[i].$2,
-          sortOrder: i,
-          createdAt: now,
-        );
-        cats[c.name.toLowerCase()] = c;
-        cs.put(Db.categories, c.id, c.toMap());
-      }
       return a;
     }
 
-    Category resolveCategory(String accountId, String name) {
-      final cats = catsOf(accountId);
+    Category resolveCategory(String name) {
       final hit = cats[name.toLowerCase()];
       if (hit != null) return hit;
       final maxOrder = cats.values.fold<int>(-1, (m, c) => c.sortOrder > m ? c.sortOrder : m);
       final c = Category(
         id: newId(),
-        accountId: accountId,
         name: name,
         emoji: '📌',
         color: 0xFF94A3B8,
@@ -912,7 +883,7 @@ class LedgerStore extends ChangeNotifier {
         accountId: acc.id,
         type: r.type,
         amount: r.amount,
-        categoryId: resolveCategory(acc.id, r.category).id,
+        categoryId: resolveCategory(r.category).id,
         description: r.description,
         date: r.date,
         notes: r.notes,

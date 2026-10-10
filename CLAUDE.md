@@ -57,6 +57,11 @@ The web build is the preview the user tests with, so:
 - Every delete must offer Undo: keep the inverse `ChangeSet` from `WriteResult.undo` and pass it to `store.undo()`.
 - Give each delete its own inverse. Never share one Undo slot between deletes.
 
+### Categories
+- **Categories are app-wide**: one list shared by every account (since 1.2.0; `Category` has no `accountId`).
+- **Default categories** (`defaultCat_<type>_<accountId>`) and **payday categories** (`cycle_<accountId>`) stay per account, chosen from the shared list.
+- Older data is folded in by `mergeCategoriesAcrossAccounts` (`lib/domain/category_merge.dart`): schema v2 migration in `Db._migrate`, and Restore of older backups. Same-named categories merge; the first account in account order wins.
+
 ### Transfers
 - A transfer is always exactly two `Txn` legs that share one `transferId`.
 - Never write one leg without the other.

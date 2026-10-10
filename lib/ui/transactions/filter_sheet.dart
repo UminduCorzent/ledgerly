@@ -191,15 +191,10 @@ class _FilterSheetState extends State<_FilterSheet> {
     final accounts = _ledger.accounts;
     final count = _store.countFor(_f, _range);
 
-    // Category chips from every selected account, merged by name.
-    final seen = <String>{};
-    final cats = <(String, String)>[]; // (lower name, display)
-    for (final accId in _effectiveAccounts) {
-      for (final cat in _ledger.categoriesFor(accId)) {
-        final lower = cat.name.toLowerCase();
-        if (seen.add(lower)) cats.add((lower, '${cat.emoji} ${cat.name}'));
-      }
-    }
+    // Categories are shared by every account.
+    final cats = <(String, String)>[ // (lower name, display)
+      for (final cat in _ledger.categories) (cat.name.toLowerCase(), '${cat.emoji} ${cat.name}'),
+    ];
     final q = _catQuery.trim().toLowerCase();
     final shownCats = q.isEmpty ? cats : cats.where((e) => e.$1.contains(q)).toList();
 

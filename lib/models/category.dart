@@ -1,10 +1,9 @@
-/// Categories belong to one account and are untyped: any category can be used
-/// for income or expense. Transactions link to them by id, so a rename shows
+/// Categories are shared by every account and untyped: any category can be
+/// used for income or expense in any account. Transactions link to them by id, so a rename shows
 /// everywhere immediately.
 class Category {
   const Category({
     required this.id,
-    required this.accountId,
     required this.name,
     required this.emoji,
     required this.color,
@@ -13,7 +12,6 @@ class Category {
   });
 
   final String id;
-  final String accountId;
   final String name;
   final String emoji;
   final int color;
@@ -21,7 +19,6 @@ class Category {
   final DateTime createdAt;
 
   Category copyWith({
-    String? accountId,
     String? name,
     String? emoji,
     int? color,
@@ -29,7 +26,6 @@ class Category {
   }) =>
       Category(
         id: id,
-        accountId: accountId ?? this.accountId,
         name: name ?? this.name,
         emoji: emoji ?? this.emoji,
         color: color ?? this.color,
@@ -39,7 +35,6 @@ class Category {
 
   Map<String, dynamic> toMap() => {
         'id': id,
-        'accountId': accountId,
         'name': name,
         'emoji': emoji,
         'color': color,
@@ -49,7 +44,6 @@ class Category {
 
   factory Category.fromMap(Map<String, dynamic> m) => Category(
         id: m['id'] as String,
-        accountId: (m['accountId'] as String?) ?? '',
         name: (m['name'] as String?) ?? '',
         emoji: (m['emoji'] as String?) ?? '📌',
         color: (m['color'] as num?)?.toInt() ?? 0xFF94A3B8,

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' hide Category;
 
 import '../data/db.dart';
 import '../domain/backup_codec.dart';
+import '../domain/category_merge.dart';
 import 'error_reporter.dart';
 import 'ledger_store.dart';
 import 'settings_store.dart';
@@ -109,8 +110,9 @@ class BackupStore extends ChangeNotifier {
   /// Validates [json], saves a safety backup of the current data, replaces
   /// everything, checks the record counts, and rolls back if anything fails.
   Future<RestoreOutcome> restore(String json) async {
-    final data = decodeBackup(json);
-    if (data == null) return RestoreOutcome.invalidFile;
+    final decoded = decodeBackup(json);
+    if (decoded == null) return RestoreOutcome.invalidFile;
+    final data = _withSharedCategories(decoded);
     final safety = await create(kind: BackupKind.safety);
     if (safety == null) return RestoreOutcome.failedRolledBack;
     try {
@@ -132,6 +134,25 @@ class BackupStore extends ChangeNotifier {
       _reloadAll();
       return RestoreOutcome.failedRolledBack;
     }
+  }
+
+  /// Backups from Ledgerly 1.1 and earlier have per-account categories; fold
+  /// them into the app-wide list (a no-op for newer backups).
+  static BackupData _withSharedCategories(BackupData d) {
+    final r = mergeCategoriesAcrossAccounts(
+      accounts: d.accounts,
+      categories: d.categories,
+      txns: d.txns,
+      settings: d.settings,
+    );
+    if (!r.changed) return d;
+    return BackupData(
+      createdAt: d.createdAt,
+      accounts: d.accounts,
+      categories: r.categories,
+      txns: r.applyToTxns(d.txns),
+      settings: {...d.settings, ...r.changedSettings},
+    );
   }
 
   Future<void> _apply(BackupData d) => _db.replaceAll(

@@ -57,7 +57,6 @@ class AccountDeletionPlan {
   final List<Txn> putTxns = [];
   final Set<String> deleteTxnIds = {};
   final List<Category> putCategories = [];
-  final Set<String> deleteCategoryIds = {};
 }
 
 /// Labels the plan needs; passed in so this file stays free of UI strings.
@@ -78,12 +77,14 @@ const int kTransfersCategoryColor = 0xFF8B5CF6;
 
 /// Plans deleting [accountId].
 ///
+/// Categories are shared by all accounts, so they are never deleted here.
 /// * [reassignToId] null → the account's own rows are deleted. The other side
-///   of each of its transfers becomes a plain income/expense row (in an auto-created
-///   "Transfers" category) so the surviving account's balance does not change.
-/// * [reassignToId] set → rows move to that account (categories matched by name,
-///   created when missing). A transfer whose other side is already in the target
-///   would become a transfer to itself, so both legs are removed (net zero).
+///   of each of its transfers becomes a plain income/expense row (in the shared
+///   "Transfers" category, created when missing) so the surviving account's
+///   balance does not change.
+/// * [reassignToId] set → rows move to that account with their categories. A
+///   transfer whose other side is already in the target would become a transfer
+///   to itself, so both legs are removed (net zero).
 AccountDeletionPlan planAccountDeletion({
   required String accountId,
   required String accountName,
@@ -97,18 +98,13 @@ AccountDeletionPlan planAccountDeletion({
   final plan = AccountDeletionPlan();
   final cats = List<Category>.of(categories);
 
-  Category ensureCategory(String targetAccount, String name, String emoji, int color) {
+  Category ensureCategory(String name, String emoji, int color) {
     final lower = name.toLowerCase();
-    final existing = cats.firstWhereOrNull(
-      (c) => c.accountId == targetAccount && c.name.toLowerCase() == lower,
-    );
+    final existing = cats.firstWhereOrNull((c) => c.name.toLowerCase() == lower);
     if (existing != null) return existing;
-    final maxOrder = cats
-        .where((c) => c.accountId == targetAccount)
-        .fold<int>(-1, (m, c) => c.sortOrder > m ? c.sortOrder : m);
+    final maxOrder = cats.fold<int>(-1, (m, c) => c.sortOrder > m ? c.sortOrder : m);
     final created = Category(
       id: newId(),
-      accountId: targetAccount,
       name: name,
       emoji: emoji,
       color: color,
@@ -131,14 +127,7 @@ AccountDeletionPlan planAccountDeletion({
       if (reassignToId == null) {
         plan.deleteTxnIds.add(t.id);
       } else {
-        String? catId = t.categoryId;
-        final src = cats.firstWhereOrNull((c) => c.id == catId);
-        if (src != null) {
-          catId = ensureCategory(reassignToId, src.name, src.emoji, src.color).id;
-        }
-        plan.putTxns.add(
-          t.copyWith(accountId: reassignToId, categoryId: catId, updatedAt: now),
-        );
+        plan.putTxns.add(t.copyWith(accountId: reassignToId, updatedAt: now));
       }
       continue;
     }
@@ -150,7 +139,6 @@ AccountDeletionPlan planAccountDeletion({
       plan.deleteTxnIds.add(t.id);
       if (other != null && other.accountId != accountId) {
         final cat = ensureCategory(
-          other.accountId,
           labels.transfersCategoryName,
           kTransfersCategoryEmoji,
           kTransfersCategoryColor,
@@ -185,8 +173,5 @@ AccountDeletionPlan planAccountDeletion({
     }
   }
 
-  for (final c in categories.where((c) => c.accountId == accountId)) {
-    plan.deleteCategoryIds.add(c.id);
-  }
   return plan;
 }

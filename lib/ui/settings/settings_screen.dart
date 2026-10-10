@@ -32,6 +32,7 @@ class SettingsScreen extends StatelessWidget {
     final c = context.colors;
     final settings = context.watch<SettingsStore>();
     final accounts = context.select<LedgerStore, int>((l) => l.accounts.length);
+    final categories = context.select<LedgerStore, int>((l) => l.categories.length);
     final top = MediaQuery.paddingOf(context).top;
 
     return ListView(
@@ -76,13 +77,25 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           _Row(
+            icon: Icons.category_outlined,
+            title: s.categoriesTitle,
+            subtitle: s.categoriesCount(categories),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const CategoriesScreen()),
+            ),
+          ),
+        ]),
+        const SizedBox(height: 24),
+        const _AccountGroup(),
+        const SizedBox(height: 24),
+        // About sits last, as in most apps.
+        _Group(children: [
+          _Row(
             icon: Icons.info_outline_rounded,
             title: s.settingsAbout,
             subtitle: s.aboutVersion(AppInfo.version, AppInfo.buildNumber, AppInfo.buildSha),
           ),
         ]),
-        const SizedBox(height: 24),
-        const _AccountGroup(),
         const SizedBox(height: 16),
         Center(
           child: Text(s.appName, style: TextStyle(color: c.muted, fontSize: 12)),
@@ -104,7 +117,6 @@ class _AccountGroup extends StatelessWidget {
     final account = ledger.activeAccount;
     if (account == null) return const SizedBox.shrink();
     final color = Color(account.color);
-    final cats = ledger.categoriesFor(account.id);
     final expenseDefault = ledger.category(ledger.defaultCategoryId(account.id, TxnType.expense));
     final incomeDefault = ledger.category(ledger.defaultCategoryId(account.id, TxnType.income));
     final badge = _ScopeBadge(emoji: account.emoji, color: color);
@@ -164,16 +176,6 @@ class _AccountGroup extends StatelessWidget {
                 badge: badge,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(builder: (_) => const MonthCycleScreen()),
-                ),
-              ),
-              Divider(height: 1, indent: 60, color: c.line),
-              _Row(
-                icon: Icons.category_outlined,
-                title: s.categoriesTitle,
-                subtitle: s.categoriesCount(cats.length),
-                badge: badge,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const CategoriesScreen()),
                 ),
               ),
               Divider(height: 1, indent: 60, color: c.line),

@@ -31,9 +31,8 @@ Txn _txn(
       excluded: excluded,
     );
 
-Category _cat(String id, String account, String name) => Category(
+Category _cat(String id, String name) => Category(
       id: id,
-      accountId: account,
       name: name,
       emoji: '📌',
       color: 0xFF000000,
@@ -227,7 +226,7 @@ void main() {
 
     test('delete mode turns the surviving leg into a plain row', () {
       final txns = [...transfer(), _txn('own', TxnType.expense, 5, account: 'a', cat: 'ca')];
-      final cats = [_cat('ca', 'a', 'Food'), _cat('cb', 'b', 'Food')];
+      final cats = [_cat('ca', 'Food')];
       final plan = planAccountDeletion(
         accountId: 'a',
         accountName: 'Bank',
@@ -238,21 +237,20 @@ void main() {
         labels: labels,
       );
       expect(plan.deleteTxnIds, containsAll(['out', 'own']));
-      expect(plan.deleteCategoryIds, {'ca'});
       final converted = plan.putTxns.single;
       expect(converted.id, 'in');
       expect(converted.type, TxnType.income);
       expect(converted.transferId, isNull);
       expect(converted.description, 'Transfer from Bank');
       expect(converted.amount, 0.33); // balance of b unchanged
+      // Categories are shared: none are deleted, and "Transfers" is created once.
       expect(plan.putCategories.single.name, 'Transfers');
-      expect(plan.putCategories.single.accountId, 'b');
       expect(converted.categoryId, plan.putCategories.single.id);
     });
 
-    test('reassign moves rows and maps categories by name', () {
+    test('reassign moves rows and keeps their shared category', () {
       final txns = [_txn('own', TxnType.expense, 5, account: 'a', cat: 'ca')];
-      final cats = [_cat('ca', 'a', 'Food'), _cat('cc', 'c', 'food')];
+      final cats = [_cat('ca', 'Food')];
       final plan = planAccountDeletion(
         accountId: 'a',
         accountName: 'Bank',
@@ -265,7 +263,7 @@ void main() {
       );
       final moved = plan.putTxns.single;
       expect(moved.accountId, 'c');
-      expect(moved.categoryId, 'cc');
+      expect(moved.categoryId, 'ca');
       expect(plan.putCategories, isEmpty);
     });
 

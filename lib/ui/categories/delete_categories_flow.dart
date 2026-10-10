@@ -11,19 +11,18 @@ import '../widgets/common.dart';
 /// Confirm → move or delete the linked transactions → delete → Undo.
 Future<void> runDeleteCategoriesFlow(
   BuildContext context,
-  String accountId,
   Set<String> ids,
 ) async {
   if (ids.isEmpty) return;
   final s = AppStrings.of(context);
   final store = context.read<LedgerStore>();
-  final all = store.categoriesFor(accountId);
+  final all = store.categories;
   final remaining = all.where((c) => !ids.contains(c.id)).toList();
   if (remaining.isEmpty) {
     showSnack(context, s.keepOneCategory);
     return;
   }
-  final usage = store.categoryUsage(accountId);
+  final usage = store.categoryUsage();
   final linked = ids.fold<int>(0, (n, id) => n + (usage[id] ?? 0));
 
   final choice = await showDialog<_Choice>(

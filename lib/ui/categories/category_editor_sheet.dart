@@ -13,25 +13,23 @@ import 'delete_categories_flow.dart';
 
 Future<void> showCategoryEditor(
   BuildContext context, {
-  required String accountId,
   Category? editing,
 }) async {
   final deleteRequested = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (_) => _CategoryEditor(accountId: accountId, editing: editing),
+    builder: (_) => _CategoryEditor(editing: editing),
   );
   // Delete runs after the sheet closes, so its dialog and Undo snackbar sit on the screen.
   if (deleteRequested == true && editing != null && context.mounted) {
-    await runDeleteCategoriesFlow(context, accountId, {editing.id});
+    await runDeleteCategoriesFlow(context, {editing.id});
   }
 }
 
 class _CategoryEditor extends StatefulWidget {
-  const _CategoryEditor({required this.accountId, this.editing});
+  const _CategoryEditor({this.editing});
 
-  final String accountId;
   final Category? editing;
 
   @override
@@ -60,7 +58,7 @@ class _CategoryEditorState extends State<_CategoryEditor> {
       setState(() => _error = s.nameTooShort);
       return;
     }
-    if (store.isCategoryNameTaken(widget.accountId, name, exceptId: widget.editing?.id)) {
+    if (store.isCategoryNameTaken(name, exceptId: widget.editing?.id)) {
       setState(() => _error = s.categoryNameTaken);
       return;
     }
@@ -69,7 +67,7 @@ class _CategoryEditorState extends State<_CategoryEditor> {
     final nav = Navigator.of(context);
     final e = widget.editing;
     final r = e == null
-        ? await store.createCategory(accountId: widget.accountId, name: name, emoji: _emoji, color: _color)
+        ? await store.createCategory(name: name, emoji: _emoji, color: _color)
         : await store.updateCategory(e.copyWith(name: name, emoji: _emoji, color: _color));
     if (!mounted) return;
     setState(() => _saving = false);
