@@ -40,6 +40,32 @@ void main() {
       expect(txnMatches(_t('3', TxnType.transfer, 5), f, categoryName: _name), isFalse);
     });
 
+    test('transfer direction narrows transfers only', () {
+      Txn leg(String id, TransferDirection dir) => Txn(
+            id: id,
+            accountId: 'a',
+            type: TxnType.transfer,
+            amount: 5,
+            description: id,
+            date: DateTime(2026, 10, 5),
+            createdAt: DateTime(2026, 10, 5),
+            direction: dir,
+          );
+      const f = TxnFilter(
+        types: {TxnType.income, TxnType.transfer},
+        transferDirection: TransferDirection.incoming,
+      );
+      expect(txnMatches(leg('in', TransferDirection.incoming), f, categoryName: _name), isTrue);
+      expect(txnMatches(leg('out', TransferDirection.outgoing), f, categoryName: _name), isFalse);
+      expect(txnMatches(_t('i', TxnType.income, 5), f, categoryName: _name), isTrue);
+      expect(txnMatches(_t('e', TxnType.expense, 5), f, categoryName: _name), isFalse);
+      // Ignored once transfers aren't among the selected types.
+      final noTransfers = f.copyWith(types: {TxnType.income});
+      expect(noTransfers.transferDirection, TransferDirection.incoming);
+      expect(txnMatches(_t('i2', TxnType.income, 5), noTransfers, categoryName: _name), isTrue);
+      expect(f.copyWith(transferDirection: null).transferDirection, isNull);
+    });
+
     test('amount bounds are inclusive', () {
       const f = TxnFilter(minAmount: 10, maxAmount: 20);
       expect(txnMatches(_t('a', TxnType.expense, 10), f, categoryName: _name), isTrue);

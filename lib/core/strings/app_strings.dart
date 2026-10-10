@@ -48,6 +48,8 @@ class AppStrings {
   String get typeExpense => 'Expense';
   String get typeIncome => 'Income';
   String get typeTransfer => 'Transfer';
+  String get typeTransferIn => 'Transfer in';
+  String get typeTransferOut => 'Transfer out';
   String typeLabel(String name) => switch (name) {
         'income' => typeIncome,
         'transfer' => typeTransfer,
@@ -87,6 +89,7 @@ class AppStrings {
       'Add your first one to see your balance and spending here.';
   String get homeEmptyAction => 'Add first transaction';
   String seeCategoryTransactions(String name) => 'See $name transactions';
+  String get seeTransfers => 'See these transfers';
   String get switchAccount => 'Switch account';
 
   // Add / edit sheet
@@ -329,7 +332,7 @@ class AppStrings {
   String get cycleModePayday => 'Payday';
   String get cycleModeFixedBody => 'Every month starts on the same day.';
   String get cycleModePaydayBody =>
-      'Each month starts when your salary arrives, even if the date moves around.';
+      'Each month starts when your salary arrives (or money is transferred in), even if the date moves around.';
   String get startDayTitle => 'Start day';
   String get fallbackStartDayTitle => 'Fallback start day';
   String get fallbackStartDayBody => 'Used for dates before your first recorded payday.';
@@ -338,6 +341,7 @@ class AppStrings {
   String get shortMonthHint => 'In shorter months the cycle starts on the last day.';
   String get paydayCategories => 'Payday categories';
   String get paydayCategoriesAny => 'Any income counts';
+  String get paydayTransfersNote => 'Money transferred in from your other accounts always counts.';
   String paydayCategoriesCount(int n) => '$n selected';
   String get minimumAmount => 'Minimum amount';
   String get minimumAmountBody => 'Smaller income won’t start a new month.';

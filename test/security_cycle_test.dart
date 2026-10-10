@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ledgerly/domain/date_range.dart';
 import 'package:ledgerly/domain/month_cycle.dart';
 import 'package:ledgerly/domain/pin_hasher.dart';
+import 'package:ledgerly/models/txn.dart';
 
 String _hex(List<int> b) => b.map((x) => x.toRadixString(16).padLeft(2, '0')).join();
 
@@ -79,6 +80,34 @@ void main() {
         typicalCycleLength([DateTime(2026, 1, 25), DateTime(2026, 2, 24), DateTime(2026, 3, 27)]),
         31, // gaps 30 and 31 → mean of the middle two, rounded
       );
+    });
+
+    test('incoming transfers qualify as payday regardless of categories', () {
+      final cfg = const CycleConfig().copyWith(
+        mode: CycleMode.payday,
+        anchorCategoryIds: {'salary'},
+        minAmount: 1000,
+      );
+      final d = DateTime(2026, 9, 24);
+      Txn t(TxnType type, double amount, {String? cat, TransferDirection? dir, bool excluded = false}) => Txn(
+            id: 'x',
+            accountId: 'a',
+            type: type,
+            amount: amount,
+            categoryId: cat,
+            description: 'x',
+            date: d,
+            createdAt: d,
+            direction: dir,
+            excluded: excluded,
+          );
+      expect(qualifiesAsPayday(t(TxnType.transfer, 160000, dir: TransferDirection.incoming), cfg), isTrue);
+      expect(qualifiesAsPayday(t(TxnType.transfer, 160000, dir: TransferDirection.outgoing), cfg), isFalse);
+      expect(qualifiesAsPayday(t(TxnType.transfer, 500, dir: TransferDirection.incoming), cfg), isFalse);
+      expect(qualifiesAsPayday(t(TxnType.income, 5000, cat: 'salary'), cfg), isTrue);
+      expect(qualifiesAsPayday(t(TxnType.income, 5000, cat: 'gift'), cfg), isFalse);
+      expect(qualifiesAsPayday(t(TxnType.income, 5000, cat: 'salary', excluded: true), cfg), isFalse);
+      expect(qualifiesAsPayday(t(TxnType.expense, 5000, cat: 'salary'), cfg), isFalse);
     });
 
     test('config round trip and clamping', () {

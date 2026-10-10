@@ -1,3 +1,4 @@
+import '../models/txn.dart';
 import 'date_range.dart';
 
 // Month-cycle date math: what "this month" means for an account.
@@ -178,4 +179,16 @@ class CycleConfig {
       pinnedStart: pinned == null ? null : DateTime.fromMillisecondsSinceEpoch((pinned as num).toInt()),
     );
   }
+}
+
+/// Whether [t] can start a payday cycle under [cfg].
+bool qualifiesAsPayday(Txn t, CycleConfig cfg) {
+  // A tracking-only (excluded) income can never start a cycle.
+  if (!t.isCounted || t.amount < cfg.minAmount) return false;
+  // Money transferred in (e.g. a salary converted from a USD account) is
+  // payday income too. Transfers have no category, so the payday-category
+  // choice can't apply to them; minimum amount and cooldown still do.
+  if (t.isTransfer) return t.direction == TransferDirection.incoming;
+  return t.type == TxnType.income &&
+      (cfg.anchorCategoryIds.isEmpty || cfg.anchorCategoryIds.contains(t.categoryId));
 }

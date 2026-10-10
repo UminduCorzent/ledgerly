@@ -179,20 +179,27 @@ class _MonthCycleScreenState extends State<MonthCycleScreen> {
         body: cfg.anchorCategoryIds.isEmpty
             ? s.paydayCategoriesAny
             : s.paydayCategoriesCount(cfg.anchorCategoryIds.length),
-        child: Wrap(
-          spacing: 8,
-          runSpacing: 8,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (final cat in cats)
-              FilterChip(
-                label: Text('${cat.emoji} ${cat.name}', maxLines: 1, overflow: TextOverflow.ellipsis),
-                selected: cfg.anchorCategoryIds.contains(cat.id),
-                onSelected: (on) {
-                  final next = {...cfg.anchorCategoryIds};
-                  on ? next.add(cat.id) : next.remove(cat.id);
-                  save(cfg.copyWith(anchorCategoryIds: next));
-                },
-              ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final cat in cats)
+                  FilterChip(
+                    label: Text('${cat.emoji} ${cat.name}', maxLines: 1, overflow: TextOverflow.ellipsis),
+                    selected: cfg.anchorCategoryIds.contains(cat.id),
+                    onSelected: (on) {
+                      final next = {...cfg.anchorCategoryIds};
+                      on ? next.add(cat.id) : next.remove(cat.id);
+                      save(cfg.copyWith(anchorCategoryIds: next));
+                    },
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(s.paydayTransfersNote, style: TextStyle(color: c.muted, fontSize: 12.5)),
           ],
         ),
       ),
@@ -269,7 +276,10 @@ class _MonthCycleScreenState extends State<MonthCycleScreen> {
                                   Text(
                                     txn == null
                                         ? s.pinnedManually
-                                        : (ledger.category(txn.categoryId)?.name ?? txn.description),
+                                        : txn.isTransfer
+                                            ? s.transferFromAccount(
+                                                ledger.account(txn.counterAccountId)?.name ?? txn.description)
+                                            : (ledger.category(txn.categoryId)?.name ?? txn.description),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(color: c.muted, fontSize: 12.5),

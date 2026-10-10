@@ -7,6 +7,7 @@ import '../../core/strings/app_strings.dart';
 import '../../core/theme/motion.dart';
 import '../../core/theme/tokens.dart';
 import '../../domain/ledger_math.dart';
+import '../../domain/transfer_rules.dart';
 import '../../models/account.dart';
 import '../../models/txn.dart';
 import '../../state/ledger_store.dart';
@@ -34,10 +35,16 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _highlighted;
 
   /// Opens the Transactions tab filtered to what was tapped, for the period shown here.
-  void _openList(BuildContext context, {required TxnType type, String? categoryName}) {
+  void _openList(
+    BuildContext context, {
+    required TxnType type,
+    String? categoryName,
+    bool transfersOnly = false,
+  }) {
     context.read<TxnFilterStore>().openFromHome(
           type: type,
           categoryName: categoryName,
+          transfersOnly: transfersOnly,
           allTime: _allTime,
         );
     ShellNav.maybeOf(context)?.goTo(AppShell.transactions);
@@ -108,6 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
           }),
           onHighlight: (id) => setState(() => _highlighted = id == _highlighted ? null : id),
           onOpenCategory: (name) => _openList(context, type: _breakdownType, categoryName: name),
+          onOpenTransfers: () => _openList(context, type: _breakdownType, transfersOnly: true),
         ),
         const SizedBox(height: 20),
         SectionHeader(
@@ -462,6 +470,7 @@ class _BreakdownCard extends StatelessWidget {
     required this.onType,
     required this.onHighlight,
     required this.onOpenCategory,
+    required this.onOpenTransfers,
   });
 
   final Account account;
@@ -471,8 +480,13 @@ class _BreakdownCard extends StatelessWidget {
   final ValueChanged<TxnType> onType;
   final ValueChanged<String> onHighlight;
   final ValueChanged<String> onOpenCategory;
+  final VoidCallback onOpenTransfers;
 
   static const String otherId = '__other';
+  static const String transfersId = '__transfers';
+
+  static String idOf(BreakdownEntry e) =>
+      e.isTransfers ? transfersId : (e.categoryId ?? otherId);
 
   @override
   Widget build(BuildContext context) {
@@ -482,6 +496,7 @@ class _BreakdownCard extends StatelessWidget {
 
     (String, String, Color) meta(BreakdownEntry e) {
       if (e.isOther) return ('⋯', s.otherSlice, c.muted);
+      if (e.isTransfers) return (kTransfersCategoryEmoji, s.transfersCategory, c.transfer);
       final cat = store.category(e.categoryId);
       return (cat?.emoji ?? '📌', cat?.name ?? '—', Color(cat?.color ?? 0xFF94A3B8));
     }
@@ -489,7 +504,7 @@ class _BreakdownCard extends StatelessWidget {
     final entries = breakdown.entries;
     BreakdownEntry? hl;
     for (final e in entries) {
-      if ((e.categoryId ?? otherId) == highlighted) hl = e;
+      if (idOf(e) == highlighted) hl = e;
     }
 
     return SectionCard(
@@ -519,7 +534,7 @@ class _BreakdownCard extends StatelessWidget {
               child: DonutChart(
                 slices: [
                   for (final e in entries)
-                    DonutSlice(e.categoryId ?? otherId, e.amount, meta(e).$3),
+                    DonutSlice(idOf(e), e.amount, meta(e).$3),
                 ],
                 trackColor: c.surface2,
                 highlighted: highlighted,
@@ -556,17 +571,21 @@ class _BreakdownCard extends StatelessWidget {
             const SizedBox(height: 12),
             for (final e in entries)
               _RankRow(
-                key: ValueKey(e.categoryId ?? otherId),
+                key: ValueKey(idOf(e)),
                 emoji: meta(e).$1,
                 name: meta(e).$2,
                 color: meta(e).$3,
                 amount: formatMoney(e.amount, account.currency, whole: true),
                 percent: (e.amount / breakdown.total * 100).round(),
                 fraction: breakdown.largest <= 0 ? 0 : e.amount / breakdown.largest,
-                dimmed: highlighted != null && highlighted != (e.categoryId ?? otherId),
-                onTap: () => onHighlight(e.categoryId ?? otherId),
-                onOpen: e.isOther ? null : () => onOpenCategory(meta(e).$2),
-                openLabel: s.seeCategoryTransactions(meta(e).$2),
+                dimmed: highlighted != null && highlighted != idOf(e),
+                onTap: () => onHighlight(idOf(e)),
+                onOpen: e.isOther
+                    ? null
+                    : e.isTransfers
+                        ? onOpenTransfers
+                        : () => onOpenCategory(meta(e).$2),
+                openLabel: e.isTransfers ? s.seeTransfers : s.seeCategoryTransactions(meta(e).$2),
               ),
           ],
         ],

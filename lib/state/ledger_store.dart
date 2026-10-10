@@ -244,18 +244,12 @@ class LedgerStore extends ChangeNotifier {
     _changed();
   }
 
-  bool _qualifiesAsPayday(Txn t, CycleConfig cfg) =>
-      t.type == TxnType.income &&
-      t.isCounted && // a tracking-only income can never start a cycle
-      t.amount >= cfg.minAmount &&
-      (cfg.anchorCategoryIds.isEmpty || cfg.anchorCategoryIds.contains(t.categoryId));
-
   /// Payday cycle starts for [accountId], ascending (the manual pin included).
   List<DateTime> cycleAnchors(String accountId) => _cached('anchors:$accountId', () {
         final cfg = cycleConfig(accountId);
         final dates = <DateTime>[
           for (final t in txnsFor(accountId))
-            if (_qualifiesAsPayday(t, cfg)) t.date,
+            if (qualifiesAsPayday(t, cfg)) t.date,
           if (cfg.pinnedStart != null) cfg.pinnedStart!,
         ];
         return List<DateTime>.unmodifiable(anchorsFrom(dates, cfg.cooldownDays));
@@ -270,7 +264,7 @@ class LedgerStore extends ChangeNotifier {
     for (final a in anchors.reversed.take(limit)) {
       Txn? best;
       for (final t in txnsFor(accountId)) {
-        if (!_qualifiesAsPayday(t, cfg)) continue;
+        if (!qualifiesAsPayday(t, cfg)) continue;
         if (t.date.year == a.year && t.date.month == a.month && t.date.day == a.day) {
           if (best == null || t.amount > best.amount) best = t;
         }

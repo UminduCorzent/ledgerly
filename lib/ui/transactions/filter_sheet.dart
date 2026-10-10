@@ -255,12 +255,21 @@ class _FilterSheetState extends State<_FilterSheet> {
                       children: [
                         for (final t in TxnType.values)
                           FilterChip(
-                            label: Text(s.typeLabel(t.name)),
+                            label: Text(switch (t == TxnType.transfer ? _f.transferDirection : null) {
+                              TransferDirection.incoming => s.typeTransferIn,
+                              TransferDirection.outgoing => s.typeTransferOut,
+                              null => s.typeLabel(t.name),
+                            }),
                             selected: _f.types.contains(t),
                             onSelected: (on) => setState(() {
                               final next = {..._f.types};
                               on ? next.add(t) : next.remove(t);
-                              _f = _f.copyWith(types: next);
+                              // Toggling Transfer by hand means both directions again.
+                              _f = _f.copyWith(
+                                types: next,
+                                transferDirection:
+                                    t == TxnType.transfer ? null : _f.transferDirection,
+                              );
                             }),
                           ),
                       ],

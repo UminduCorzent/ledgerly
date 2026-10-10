@@ -81,7 +81,7 @@ void main() {
   });
 
   group('totals and balance', () {
-    test('excluded rows never count; transfers move the balance', () {
+    test('excluded rows never count; transfers count as income/expense', () {
       final txns = [
         _txn('i', TxnType.income, 1000),
         _txn('e', TxnType.expense, 300),
@@ -101,7 +101,7 @@ void main() {
       ];
       final t = totalsOf(txns);
       expect(t.income, 1000);
-      expect(t.expense, 300);
+      expect(t.expense, 500); // 300 expense + 200 transferred out
       expect(t.transferOut, 200);
       expect(t.net, 500);
     });
@@ -127,6 +127,39 @@ void main() {
       expect(b.entries.first.categoryId, 'c6');
       expect(b.entries.last.isOther, isTrue);
       expect(b.entries.last.amount, 30); // c0 (10) + c1 (20)
+    });
+
+    test('breakdown adds one Transfers slice per direction, never in Other', () {
+      Txn leg(String id, double amount, TransferDirection dir) => Txn(
+            id: id,
+            accountId: 'a',
+            type: TxnType.transfer,
+            amount: amount,
+            description: id,
+            date: _t0,
+            createdAt: _t0,
+            direction: dir,
+          );
+      final txns = [
+        for (var i = 0; i < 7; i++) _txn('t$i', TxnType.expense, (i + 1) * 10.0, cat: 'c$i'),
+        leg('o1', 15, TransferDirection.outgoing),
+        leg('o2', 20, TransferDirection.outgoing),
+        leg('in', 999, TransferDirection.incoming),
+      ];
+      final b = breakdownOf(txns, TxnType.expense);
+      expect(b.total, 315);
+      expect(b.entries.length, 7); // 5 categories + Transfers + Other
+      final tr = b.entries.singleWhere((e) => e.isTransfers);
+      expect(tr.amount, 35);
+      expect(tr.isOther, isFalse);
+      // Placed by size: after c3 (40), before c2 (30).
+      expect(b.entries.indexOf(tr), 4);
+      expect(b.entries.last.isOther, isTrue);
+      expect(b.entries.last.amount, 30); // c0 (10) + c1 (20); transfers never fold in
+
+      final inc = breakdownOf(txns, TxnType.income);
+      expect(inc.total, 999);
+      expect(inc.entries.single.isTransfers, isTrue);
     });
 
     test('empty breakdown', () {

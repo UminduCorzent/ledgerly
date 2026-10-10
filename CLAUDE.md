@@ -60,6 +60,8 @@ The web build is the preview the user tests with, so:
 ### Transfers
 - A transfer is always exactly two `Txn` legs that share one `transferId`.
 - Never write one leg without the other.
+- **Transfers count as income and expense.** An incoming leg adds to Income and an outgoing leg adds to Expense, in every figure: Home cards, the breakdown donut (one "Transfers" slice), the Transactions In/Out summary and the PDF. Balances are unaffected (net = income − expense either way).
+- An incoming transfer counts as payday income for payday month cycles (`qualifiesAsPayday` in `lib/domain/month_cycle.dart`). Payday categories don't apply to it, because transfers have no category. The minimum amount and cooldown do.
 
 ## 2. Strings
 

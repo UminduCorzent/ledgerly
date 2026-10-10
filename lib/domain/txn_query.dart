@@ -33,6 +33,7 @@ class TxnFilter {
     this.minAmount,
     this.maxAmount,
     this.counting = CountingFilter.all,
+    this.transferDirection,
   });
 
   static const TxnFilter none = TxnFilter();
@@ -48,6 +49,11 @@ class TxnFilter {
   final double? minAmount;
   final double? maxAmount;
   final CountingFilter counting;
+
+  /// Narrows the transfer type to one direction (set by Home's Income/Expense
+  /// jumps, where incoming transfers count as income and outgoing as expense).
+  /// Only applies while [types] includes transfers; part of the type group.
+  final TransferDirection? transferDirection;
 
   bool get isEmpty => activeCount == 0;
 
@@ -68,6 +74,7 @@ class TxnFilter {
     Object? minAmount = _unset,
     Object? maxAmount = _unset,
     CountingFilter? counting,
+    Object? transferDirection = _unset,
   }) =>
       TxnFilter(
         types: types ?? this.types,
@@ -76,6 +83,9 @@ class TxnFilter {
         minAmount: identical(minAmount, _unset) ? this.minAmount : minAmount as double?,
         maxAmount: identical(maxAmount, _unset) ? this.maxAmount : maxAmount as double?,
         counting: counting ?? this.counting,
+        transferDirection: identical(transferDirection, _unset)
+            ? this.transferDirection
+            : transferDirection as TransferDirection?,
       );
 }
 
@@ -90,6 +100,10 @@ bool txnMatches(
 }) {
   if (range != null && !range.contains(t.date)) return false;
   if (f.types.isNotEmpty && !f.types.contains(t.type)) return false;
+  final dir = f.transferDirection;
+  if (dir != null && t.isTransfer && f.types.contains(TxnType.transfer) && t.direction != dir) {
+    return false;
+  }
   if (f.categoryNames.isNotEmpty &&
       (t.isTransfer || !f.categoryNames.contains(categoryName(t).toLowerCase()))) {
     return false;

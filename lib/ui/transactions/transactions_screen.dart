@@ -530,8 +530,17 @@ class _ActiveChips extends StatelessWidget {
         );
 
     for (final t in filter.types) {
-      chips.add(chip(s.typeLabel(t.name), () {
-        store.setFilter(filter.copyWith(types: {...filter.types}..remove(t)));
+      final dir = t == TxnType.transfer ? filter.transferDirection : null;
+      final label = switch (dir) {
+        TransferDirection.incoming => s.typeTransferIn,
+        TransferDirection.outgoing => s.typeTransferOut,
+        null => s.typeLabel(t.name),
+      };
+      chips.add(chip(label, () {
+        store.setFilter(filter.copyWith(
+          types: {...filter.types}..remove(t),
+          transferDirection: t == TxnType.transfer ? null : filter.transferDirection,
+        ));
       }));
     }
     for (final name in filter.categoryNames) {

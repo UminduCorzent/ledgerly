@@ -33,7 +33,6 @@ Future<Uint8List> buildPdfReport({
 
   final byCurrency = <String, List<ExportRow>>{};
   for (final r in rows) {
-    if (r.type == TxnType.transfer) continue; // transfers move money, they aren't income or spending
     (byCurrency[r.currency] ??= []).add(r);
   }
 
@@ -106,7 +105,17 @@ Future<Uint8List> buildPdfReport({
         final spend = <String, double>{};
         final sources = <String, double>{};
         for (final r in entry.value) {
-          if (r.type == TxnType.income) {
+          // Transfers count as money in / out, the same as the app's totals.
+          if (r.type == TxnType.transfer) {
+            final key = s.transfersCategory;
+            if (r.direction == TransferDirection.outgoing) {
+              exp += r.amount;
+              spend[key] = (spend[key] ?? 0) + r.amount;
+            } else {
+              inc += r.amount;
+              sources[key] = (sources[key] ?? 0) + r.amount;
+            }
+          } else if (r.type == TxnType.income) {
             inc += r.amount;
             sources[r.category] = (sources[r.category] ?? 0) + r.amount;
           } else {

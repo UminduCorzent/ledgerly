@@ -224,10 +224,31 @@ class TxnFilterStore extends ChangeNotifier {
   }
 
   /// Home → Transactions jumps (income/expense pill, breakdown row).
-  void openFromHome({TxnType? type, String? categoryName, required bool allTime}) {
+  ///
+  /// Home counts incoming transfers as income and outgoing ones as expense, so
+  /// the Income/Expense pills open their type plus transfers in that direction,
+  /// and [transfersOnly] (the breakdown's Transfers slice) opens just those.
+  void openFromHome({
+    TxnType? type,
+    String? categoryName,
+    bool transfersOnly = false,
+    required bool allTime,
+  }) {
+    final dir = switch (type) {
+      TxnType.income => TransferDirection.incoming,
+      TxnType.expense => TransferDirection.outgoing,
+      _ => null,
+    };
     _filter = TxnFilter(
-      types: type == null ? const {} : {type},
+      types: type == null
+          ? const {}
+          : transfersOnly
+              ? const {TxnType.transfer}
+              : categoryName != null
+                  ? {type}
+                  : {type, TxnType.transfer},
       categoryNames: categoryName == null ? const {} : {categoryName.toLowerCase()},
+      transferDirection: categoryName == null ? dir : null,
     );
     _query = '';
     _custom = null;
@@ -288,7 +309,13 @@ class TxnFilterStore extends ChangeNotifier {
         case TxnType.expense:
           expense += t.amount;
         case TxnType.transfer:
+          // Counts as money in / out, the same as Home's figures.
           transfer += t.amount;
+          if (t.direction == TransferDirection.outgoing) {
+            expense += t.amount;
+          } else {
+            income += t.amount;
+          }
       }
     }
     final mixed = currencies.length > 1;

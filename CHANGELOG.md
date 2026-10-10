@@ -3,6 +3,20 @@
 This file lists every Ledgerly release, newest first. It loosely follows the
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format, and dates are `YYYY-MM-DD`.
 
+## [1.1.0] - 2026-10-10
+
+### Changed
+- **Transfers now count towards Income and Expense.** Money transferred in counts as income; money transferred out counts as expense.
+  - Example: you receive a USD salary in one account and convert part of it into another. The first account now shows that money going out, and the second shows it coming in.
+  - Moving money into a savings account now also shows as spending in the account it left.
+  - This applies everywhere totals appear: the Income and Expense cards on Home, the In / Out line on Transactions, and the PDF summary.
+  - Balances don't change.
+- **The Home breakdown has a 🔁 Transfers slice**, so the donut's total matches the card. Tapping its arrow lists just those transfers.
+- **Tapping Income or Expense on Home** now lists the matching transfers as well, labelled "Transfer in" or "Transfer out". Remove that filter chip, or toggle Transfer in Filters, to see both directions.
+- **Payday month cycles also start when money is transferred in.** This covers a salary that arrives in another account and is then moved over.
+  - Payday categories don't apply to transfers, because transfers have no category. The minimum amount and cooldown still do.
+  - Month cycle → Detected cycle starts shows these as "Transfer from <account>".
+
 ## [1.0.1] - 2026-10-06
 
 ### Fixed
